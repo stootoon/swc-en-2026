@@ -1,0 +1,10 @@
+pyproject.toml
+swcbehav/__init__.py
+swcbehav/design.py
+swcbehav/generate.py
+swcbehav/task.py
+swcbehav.egg-info/PKG-INFO
+swcbehav.egg-info/SOURCES.txt
+swcbehav.egg-info/dependency_links.txt
+swcbehav.egg-info/requires.txt
+swcbehav.egg-info/top_level.txt

@@ -1,0 +1,9 @@
+Metadata-Version: 2.4
+Name: swcbehav
+Version: 0.1.0
+Summary: Backend for the SWC ENC 2026 behaviour teaching module
+Requires-Python: >=3.9
+Requires-Dist: numpy>=1.26
+Requires-Dist: scipy>=1.11
+Requires-Dist: matplotlib>=3.7
+Requires-Dist: pandas>=2.0
