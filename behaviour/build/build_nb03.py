@@ -35,28 +35,82 @@ def get_Xy(sess):
     return X, y, cols
 """),
     md(r"""
-## 1. The model and its likelihood
+## 1. One image at a time: the Bernoulli model
 
-The model predicts the probability that a licking bout starts on image $t$ from
-the design row $x_t$ and a weight vector $w$:
+Start with a single image. The model turns its design row $x_t$ and the weights
+$w$ into a probability that a licking bout starts on it:
 
-$$p_t = \sigma(w \cdot x_t), \qquad \sigma(z) = \frac{1}{1 + e^{-z}}.$$
+$$p_t = \sigma(w \cdot x_t), \qquad \sigma(z) = \frac{1}{1 + e^{-z}} .$$
 
-Each image is a coin flip (Bernoulli): a bout starts ($y_t = 1$) with probability
-$p_t$. Assuming images are independent given $w$, the probability of the whole
-observed lick pattern is the product over images, and its logarithm — the
-**log-likelihood** — is a sum:
+The outcome $y_t$ is binary — a bout either starts ($y_t = 1$) or it doesn't
+($y_t = 0$) — so one image is a biased coin flip. The distribution of a single
+yes/no outcome with success probability $p_t$ is the **Bernoulli distribution**:
 
-$$\log \mathcal{L}(w) = \sum_t \Big[\, y_t \log p_t + (1 - y_t)\log(1 - p_t)\,\Big]
- = \sum_t \Big[\, y_t\,(w\cdot x_t) - \log\!\big(1 + e^{\,w\cdot x_t}\big) \Big].$$
+$$P(y_t \mid p_t) =
+\begin{cases} p_t & \text{if } y_t = 1 \\ 1 - p_t & \text{if } y_t = 0 \end{cases}
+\;=\; p_t^{\,y_t}\,(1 - p_t)^{\,1 - y_t}.$$
 
-The right-hand form is the one to implement: it avoids computing $p_t$ and then
-taking its log (which overflows for confident predictions). We use
-`np.logaddexp(0, z)` for $\log(1 + e^z)$, which is numerically stable.
+The compact form on the right packs both cases into one expression, using the
+fact that anything to the power $0$ is $1$: when $y_t = 1$ it reduces to $p_t$;
+when $y_t = 0$ it reduces to $1 - p_t$. Either way it is the probability the model
+assigns to *what the mouse actually did* on image $t$.
+"""),
+    md(r"""
+## 2. A whole session: independence makes a product
 
-**Exercise 1.** Complete the log-likelihood term inside `neg_log_likelihood`.
-We return the *negative* log-likelihood (plus a tiny ridge penalty) because
-optimizers minimize.
+We don't have one image, we have thousands. The **likelihood** is the probability
+the model assigns to the *entire* observed sequence of outcomes, read as a
+function of the weights $w$:
+
+$$\mathcal{L}(w) = P(y_1, y_2, \dots, y_T \mid w).$$
+
+To get from one image to the whole sequence we make a modeling assumption: the
+outcomes are **conditionally independent given the weights and the stimulus**.
+"Independent" here means that once $w$ and the design rows are fixed, knowing a
+bout started on image 5 tells us nothing *extra* about image 6 — whatever one
+image implies about the next is already carried in the design matrix (that is
+exactly the job of the timing regressor). Independence is precisely the condition
+that lets us **multiply** the per-image probabilities together:
+
+$$\mathcal{L}(w) = \prod_{t=1}^{T} p_t^{\,y_t}\,(1 - p_t)^{\,1 - y_t}.$$
+
+(It's an idealization — real licking surely has leftover dependencies — but it is
+the assumption the model is built on, and what makes the problem tractable.)
+"""),
+    md(r"""
+## 3. Why we work with the log
+
+That product is a clean mathematical object but a terrible one to compute. With
+$T \approx 4800$ images, every factor is a probability below $1$, and multiplying
+thousands of them **underflows to zero** in floating point — the true value is
+smaller than the computer can represent. Taking the **logarithm** cures this and
+brings two more benefits:
+
+* $\log$ turns the product into a **sum**, which can't underflow and is far easier
+  to differentiate (we'll need that to fit);
+* $\log$ is monotonically increasing, so the $w$ that maximizes $\mathcal{L}(w)$ is
+  the *same* $w$ that maximizes $\log \mathcal{L}(w)$ — switching to the log costs
+  us nothing.
+
+The log of the product becomes a sum of logs — the **log-likelihood**:
+
+$$\log \mathcal{L}(w) = \sum_{t=1}^{T} \Big[\, y_t \log p_t + (1 - y_t)\log(1 - p_t)\,\Big].$$
+
+Substituting $p_t = \sigma(w\cdot x_t)$ and simplifying (worth grinding through
+once by hand) removes the $\sigma$ entirely and gives the form we actually code:
+
+$$\log \mathcal{L}(w) = \sum_{t=1}^{T} \Big[\, y_t\,(w\cdot x_t) - \log\!\big(1 + e^{\,w\cdot x_t}\big) \Big].$$
+
+This version is also numerically safer: it never forms $p_t$ and then logs it
+(which blows up for confident predictions). The awkward $\log(1 + e^z)$ term has
+its own stable routine, `np.logaddexp(0, z)`.
+
+**Exercise 1.** Implement this log-likelihood inside `neg_log_likelihood`. We
+return the *negative* log-likelihood because the optimizer in the next step
+minimizes rather than maximizes. The extra `l2` term adds a small penalty on large
+weights — a weak Gaussian **prior** that keeps the fit well-behaved and turns pure
+maximum-likelihood into the *maximum a posteriori* (MAP) estimate the paper uses;
+leave it as given.
 """),
     code(
         solution=r"""
@@ -82,15 +136,35 @@ print("NLL at w=0:", round(neg_log_likelihood(w0, Xv, yv), 1))
 print("expected  :", round(-len(yv) * np.log(0.5), 1))
 """),
     md(r"""
-## 2. Fitting by maximum likelihood
+## 4. Maximizing the likelihood
 
-Fitting means finding the $w$ that makes the observed licking most probable —
-the $w$ that minimizes the negative log-likelihood. The function is convex, so a
-generic gradient-based optimizer lands on the global optimum. (The small ridge
-penalty makes this the *maximum a posteriori* estimate under a weak Gaussian
-prior — exactly the static model in the paper.)
+Fitting the model means choosing the weights under which the mouse's actual
+licking was **most probable** — the $w$ that maximizes $\log \mathcal{L}(w)$, or
+equivalently *minimizes* the negative log-likelihood we just built.
 
-**Exercise 2.** Complete `fit_static` using `scipy.optimize.minimize`.
+How do we find that $w$? The negative log-likelihood is a smooth function of the
+weights, so at any point we can compute its **gradient** — the direction in
+weight-space in which it rises fastest — and step the opposite way to go downhill.
+Repeating that is **gradient descent**: start from a guess, measure the slope,
+take a step down, and iterate until the slope flattens out. For logistic
+regression the gradient takes a tidy, interpretable form,
+
+$$\nabla\big(\!-\log\mathcal{L}\big) = \sum_t (p_t - y_t)\,x_t,$$
+
+so each image pushes the weights in proportion to its **prediction error**
+$(p_t - y_t)$ — images the model got wrong pull hardest. And this objective is
+**convex** (bowl-shaped, no local minima to trap us), so gradient descent is
+guaranteed to reach the single global optimum.
+
+Plain gradient descent only uses the slope and can zig-zag slowly toward the
+bottom. We can converge in far fewer steps by also using **curvature** — how the
+slope is itself changing — to pick smarter step directions and sizes. That is what
+the optimizer we'll call, **L-BFGS-B**, does; treat it as a black box whose one-line
+summary is "gradient descent that also exploits curvature." `scipy.optimize.minimize`
+even estimates the gradient for us here — in Notebook 7 we'll supply one by hand.
+
+**Exercise 2.** Complete `fit_static` using `scipy.optimize.minimize` with
+`method="L-BFGS-B"`, starting from an all-zeros weight vector.
 """),
     code(
         solution=r"""
@@ -119,7 +193,7 @@ other strategies near zero — it has **recovered the strategy from behavior
 alone**, without ever seeing the true weights. This "can we recover the truth?"
 check is the backbone of the whole course.
 
-## 3. Recovery across strategies
+## 5. Recovery across strategies
 
 Does it work for every single-strategy mouse? Fit all three and compare fitted to
 true weights.
@@ -153,7 +227,7 @@ out loud:
   the same reason the paper found the omission strategy weakly determined.
 """),
     md(r"""
-## 4. A single fit meets the dynamic mouse
+## 6. A single fit meets the dynamic mouse
 
 Everything above assumed the strategy is *fixed*. What happens if we fit one
 static $w$ to the **dynamic** mouse, whose strategy drifts? The optimizer returns
