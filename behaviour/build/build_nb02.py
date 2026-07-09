@@ -31,12 +31,12 @@ import swcbehav as sb
 Every mouse licks according to the same rule — the model from the paper, run
 forward:
 
-$$p(\text{bout starts on flash } t) = \sigma\big(w \cdot x_t\big),$$
+$$p(\text{bout starts on image } t) = \sigma\big(w \cdot x_t\big),$$
 
 where $x_t$ is the five-strategy design row from Notebook 1 and
 $w = [\,\text{bias},\ \text{visual},\ \text{omission},\ \text{post\_omission},\
 \text{timing}\,]$ are the **strategy weights**. A *static* mouse uses the same
-$w$ on every flash. Different mice are just different $w$:
+$w$ on every image. Different mice are just different $w$:
 """),
     code(r"""
 for name in ["visual", "timing", "mixed"]:
@@ -56,7 +56,7 @@ single difference is what we'll be trying to detect for the rest of the day.
 Before any modeling, how does each strategy *look*? The two simplest summaries:
 
 * **hit rate** — fraction of image changes the mouse licked to.
-* **false-alarm rate** — fraction of non-change flashes it licked on anyway.
+* **false-alarm rate** — fraction of non-change images it licked on anyway.
 
 **Exercise 1.** Complete `strategy_signature`.
 """),
@@ -106,11 +106,11 @@ plt.tight_layout(); plt.show()
 The signatures above hint at the strategies but don't isolate them. The timing
 strategy makes a sharp, testable prediction: **licking probability should climb
 with the time waited since the last bout.** We can measure that directly from the
-data — no ground truth needed — by binning flashes on *images since last bout*
+data — no ground truth needed — by binning images on *images since last bout*
 and asking how often a bout starts in each bin.
 
 **Exercise 2.** Complete `lick_prob_by_wait`.
-*Hint:* `sb.images_since_bout(bout_start)` gives the waiting count for every flash.
+*Hint:* `sb.images_since_bout(bout_start)` gives the waiting count for every image.
 """),
     code(
         solution=r"""

@@ -3,9 +3,9 @@
 A "mouse" is a rule for turning the stimulus stream into licking. We use exactly
 the model Piet et al. (2024) *fit*, run in the forward direction:
 
-    p(lick bout starts on flash t) = sigmoid( w(t) . x(t) )
+    p(lick bout starts on image t) = sigmoid( w(t) . x(t) )
 
-where ``x(t)`` is the five-strategy design vector for flash t
+where ``x(t)`` is the five-strategy design vector for image t
 
     [ bias, visual, omission, post_omission, timing ]
 
@@ -15,7 +15,7 @@ ourselves, every downstream analysis can be checked against known truth.
 
 The one subtlety: the ``timing`` regressor is a sigmoid of "images since the last
 licking bout", which depends on the licking the model is *generating*. So the
-simulation is inherently sequential -- at each flash we build the design vector
+simulation is inherently sequential -- at each image we build the design vector
 from the history so far, sample a bout, and update the counter. Reconstructing
 the design matrix from the finished session (see ``design.py``) reproduces this
 timing column exactly, which is why parameter recovery works.
@@ -33,7 +33,7 @@ from . import task as task_module
 WEIGHT_NAMES = ["bias", "visual", "omission", "post_omission", "timing"]
 
 # Timing-strategy sigmoid: licking is suppressed right after a bout, crosses 0.5
-# at ``TIMING_MIDPOINT`` flashes, and saturates high after that.
+# at ``TIMING_MIDPOINT`` images, and saturates high after that.
 TIMING_MIDPOINT = 4.0
 TIMING_SLOPE = 1.0
 
@@ -51,7 +51,7 @@ def timing_feature(images_since_bout, midpoint=TIMING_MIDPOINT, slope=TIMING_SLO
 # Weight trajectories                                                         #
 # --------------------------------------------------------------------------- #
 def constant_weights(bias, visual, omission=0.0, post_omission=0.0, timing=0.0):
-    """A static mouse: weights are the same on every flash."""
+    """A static mouse: weights are the same on every image."""
     w = np.array([bias, visual, omission, post_omission, timing], dtype=float)
     return lambda t: w
 
@@ -107,7 +107,7 @@ def sample_engagement(n_images, rng, engaged_mean=320, disengaged_mean=120,
 class Session:
     """Everything about one simulated session.
 
-    ``table`` holds one row per flash. Observable columns (what a student's
+    ``table`` holds one row per image. Observable columns (what a student's
     analysis is allowed to use) are the stimulus columns plus ``bout_start``.
     Hidden ground-truth columns (prefixed ``true_``) are included for checking
     recovery: ``p_lick``, ``true_engaged``, and the ``true_w_*`` weight columns.
@@ -136,7 +136,7 @@ def simulate(
     ----------
     session_table : output of ``task.make_session``.
     weight_fn : callable ``t -> length-5 weight vector``.
-    engaged : optional boolean array (one per flash). Where False, the lick
+    engaged : optional boolean array (one per image). Where False, the lick
         probability is scaled by ``disengaged_gain``.
     disengaged_gain : multiplicative suppression of licking when disengaged.
     response_latency : mean delay (s) from image onset to the first lick of a bout.
@@ -198,7 +198,7 @@ def simulate(
 
 def _expand_bouts_to_licks(onset, bout_start, reward, response_latency, rng,
                           ili=0.11):
-    """Turn each per-flash bout into a train of individual lick timestamps.
+    """Turn each per-image bout into a train of individual lick timestamps.
 
     Rewarded bouts last longer (the mouse consumes water); unrewarded bouts are
     brief. Inter-lick intervals stay well under the 700 ms bout threshold so the

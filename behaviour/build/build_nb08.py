@@ -50,7 +50,7 @@ plt.plot(bout_rate, color="k", lw=1)
 diseng = ~tbl["true_engaged"].to_numpy()
 plt.fill_between(np.arange(len(tbl)), 0, bout_rate.max(), where=diseng,
                  color="tab:red", alpha=0.15, label="truly disengaged")
-plt.xlabel("image flash"); plt.ylabel("bout rate"); plt.legend()
+plt.xlabel("image"); plt.ylabel("bout rate"); plt.legend()
 plt.title("licking collapses during disengaged periods")
 plt.show()
 """),
@@ -72,7 +72,7 @@ def classify_engaged(sess, window=100, threshold=0.05):
 
 engaged_hat = classify_engaged(eng)
 agreement = (engaged_hat == eng.table["true_engaged"].to_numpy()).mean()
-print(f"recovered engagement matches the hidden truth on {agreement:.1%} of flashes")
+print(f"recovered engagement matches the hidden truth on {agreement:.1%} of images")
 """,
         student=r"""
 def classify_engaged(sess, window=100, threshold=0.05):
@@ -82,7 +82,7 @@ def classify_engaged(sess, window=100, threshold=0.05):
 
 engaged_hat = classify_engaged(eng)
 agreement = (engaged_hat == eng.table["true_engaged"].to_numpy()).mean()
-print(f"recovered engagement matches the hidden truth on {agreement:.1%} of flashes")
+print(f"recovered engagement matches the hidden truth on {agreement:.1%} of images")
 """,
     ),
     md(r"""
@@ -106,12 +106,12 @@ plt.colorbar(label="truly engaged"); plt.tight_layout(); plt.show()
 
 Now the key claim. If engagement were just another strategy, adding it would
 distort the strategy readout. It doesn't. We compute the **strategy index** on the
-engaged flashes of this disengaging mouse and compare it to the *same* mouse run
+engaged images of this disengaging mouse and compare it to the *same* mouse run
 fully engaged — the strategy should be unchanged, because we built engagement to
 act only on the overall drive to lick, not on the visual/timing balance.
 
 **Exercise 2.** Complete `strategy_index_on`: restrict $X, y$ to a boolean mask of
-flashes, then run the ablation from Notebook 5.
+images, then run the ablation from Notebook 5.
 """),
     code(
         solution=r"""
@@ -127,7 +127,7 @@ fully_engaged = sb.make_mouse("visual", seed=2)   # same strategy, no disengagem
 si_reference = strategy_index_on(fully_engaged)
 si_engaged_only = strategy_index_on(eng, mask=engaged_hat)
 print(f"strategy index, fully-engaged mouse      : {si_reference:+.4f}")
-print(f"strategy index, engaged flashes only     : {si_engaged_only:+.4f}")
+print(f"strategy index, engaged images only     : {si_engaged_only:+.4f}")
 """,
         student=r"""
 def strategy_index_on(sess, mask=None):
@@ -143,7 +143,7 @@ fully_engaged = sb.make_mouse("visual", seed=2)   # same strategy, no disengagem
 si_reference = strategy_index_on(fully_engaged)
 si_engaged_only = strategy_index_on(eng, mask=engaged_hat)
 print(f"strategy index, fully-engaged mouse      : {si_reference:+.4f}")
-print(f"strategy index, engaged flashes only     : {si_engaged_only:+.4f}")
+print(f"strategy index, engaged images only     : {si_engaged_only:+.4f}")
 """,
     ),
     md(r"""

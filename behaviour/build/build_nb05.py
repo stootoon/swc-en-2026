@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 import swcbehav as sb
 
 def get_Xy(sess):
-    # Observable design matrix, per-flash outcome, and column names.
+    # Observable design matrix, per-image outcome, and column names.
     X, cols = sb.build_design_matrix(sess.table)
     y = sess.table["bout_start"].to_numpy().astype(float)
     return X, y, cols
@@ -41,7 +41,7 @@ def get_Xy(sess):
 
 Cross-validated **log-likelihood** measures how much probability the model
 assigns, on average, to licking it *didn't* see during fitting. It's reported
-here as nats per flash — higher (closer to zero) is better. Unlike AUC it's a
+here as nats per image — higher (closer to zero) is better. Unlike AUC it's a
 *proper* score: it rewards well-calibrated probabilities, not just correct
 ranking, which makes differences between nested models meaningful.
 """),
@@ -49,7 +49,7 @@ ranking, which makes differences between nested models meaningful.
 sess = sb.make_mouse("visual", seed=0)
 X, y, cols = get_Xy(sess)
 full_ll = sb.cross_val_loglik(X, y)
-print(f"full model, cross-validated log-likelihood: {full_ll:.4f} nats/flash")
+print(f"full model, cross-validated log-likelihood: {full_ll:.4f} nats/image")
 """),
     md(r"""
 ## 2. Ablation
@@ -193,7 +193,7 @@ for n in names:
     md(r"""
 Both methods crown **visual** by a wide margin and rank the rest near zero. The
 evidence differences are large in absolute terms (they sum log-probabilities over
-all 4800 flashes rather than averaging), which is why the paper reports them as a
+all 4800 images rather than averaging), which is why the paper reports them as a
 **percent change in evidence** (Fig 2D). The takeaway is the same: on these mice,
 one strategy carries the model.
 

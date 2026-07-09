@@ -1,4 +1,4 @@
-"""Turning raw licks into model inputs: bouts, per-flash outcomes, design matrix.
+"""Turning raw licks into model inputs: bouts, per-image outcomes, design matrix.
 
 These are *reference implementations* of the steps students write themselves in
 notebook 1. Later notebooks import them so each notebook can run standalone
@@ -36,10 +36,10 @@ def segment_bouts(lick_times, ili_threshold: float = BOUT_ILI_THRESHOLD):
     return np.column_stack((lick_times[starts], lick_times[ends]))
 
 
-def assign_bout_starts(session_table, bouts, flash_duration: float = 0.75):
-    """Boolean per flash: did a licking bout *start* during this flash's window?
+def assign_bout_starts(session_table, bouts, image_duration: float = 0.75):
+    """Boolean per image: did a licking bout *start* during this image's window?
 
-    Each bout's start time is mapped to the flash whose [onset, onset+flash)
+    Each bout's start time is mapped to the image whose [onset, onset+image)
     window contains it.
     """
     onset = session_table["time"].to_numpy()
@@ -47,18 +47,18 @@ def assign_bout_starts(session_table, bouts, flash_duration: float = 0.75):
     bout_start = np.zeros(n, dtype=bool)
     if len(bouts) == 0:
         return bout_start
-    idx = np.floor((bouts[:, 0] - onset[0]) / flash_duration).astype(int)
+    idx = np.floor((bouts[:, 0] - onset[0]) / image_duration).astype(int)
     idx = idx[(idx >= 0) & (idx < n)]
     bout_start[idx] = True
     return bout_start
 
 
 def images_since_bout(bout_start, initial: float = TIMING_MIDPOINT):
-    """Images elapsed since the last bout start, evaluated *before* each flash.
+    """Images elapsed since the last bout start, evaluated *before* each image.
 
-    Matches the counter used during generation: it resets to 0 on the flash
-    where a bout starts and increments otherwise, and the value used on flash t
-    is the count entering that flash.
+    Matches the counter used during generation: it resets to 0 on the image
+    where a bout starts and increments otherwise, and the value used on image t
+    is the count entering that image.
     """
     bout_start = np.asarray(bout_start, dtype=bool)
     n = len(bout_start)
@@ -78,9 +78,9 @@ def build_design_matrix(session_table, bout_start=None,
     Columns: [bias, visual, omission, post_omission, timing].
 
     * bias         : constant 1 (overall drive to lick).
-    * visual       : 1 on change flashes.
-    * omission     : 1 on omitted flashes.
-    * post_omission: 1 on the flash after an omission.
+    * visual       : 1 on change images.
+    * omission     : 1 on omitted images.
+    * post_omission: 1 on the image after an omission.
     * timing       : sigmoid of images-since-last-bout (needs ``bout_start``).
 
     If ``bout_start`` is None, the observed ``bout_start`` column of the table is

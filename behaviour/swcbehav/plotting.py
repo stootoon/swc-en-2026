@@ -10,7 +10,7 @@ from __future__ import annotations
 import numpy as np
 import matplotlib.pyplot as plt
 
-from .task import FLASH_DURATION
+from .task import IMAGE_DURATION
 
 
 def plot_session_raster(sess, t0=560.0, t1=580.0, ax=None):
@@ -50,7 +50,7 @@ def plot_session_raster(sess, t0=560.0, t1=580.0, ax=None):
 
 
 def plot_design_matrix(X, col_names, table, start=0, n=40, ax=None):
-    """Show the design-matrix columns over a slice of flashes (Fig 1C flavor)."""
+    """Show the design-matrix columns over a slice of images (Fig 1C flavor)."""
     if ax is None:
         _, ax = plt.subplots(figsize=(11, 3.0))
     sl = slice(start, start + n)
@@ -58,7 +58,7 @@ def plot_design_matrix(X, col_names, table, start=0, n=40, ax=None):
                    interpolation="nearest")
     ax.set_yticks(range(len(col_names)))
     ax.set_yticklabels(col_names)
-    ax.set_xlabel("image flash (relative)")
+    ax.set_xlabel("image (relative)")
     plt.colorbar(im, ax=ax, fraction=0.025, pad=0.01, label="regressor value")
     return ax
 
@@ -79,7 +79,7 @@ def plot_weights(true_weights=None, fit_weights=None, col_names=None, time=None,
             ax.plot(x, fit_weights[:, k], color=colors[k], lw=1.2, ls="--",
                     label=f"{name} (fit)")
     ax.axhline(0, color="0.6", lw=0.8)
-    ax.set_xlabel("image flash")
+    ax.set_xlabel("image")
     ax.set_ylabel("weight")
     ax.legend(ncol=2, fontsize=8, loc="upper right")
     return ax

@@ -17,6 +17,22 @@ last acted, or just by licking a lot. Piet et al. capture all of these at once
 with a single model of *when a licking bout starts*, built from five
 **strategy regressors**. Everything in Figures 1–2 is built on that model.
 
+**Vocabulary — image presentations.** The task advances in discrete steps: each
+**image presentation** (we'll usually just say **image**, following the paper) is
+a single **750 ms slot** — 250 ms with an image on screen, then 500 ms of gray. A
+one-hour session is a sequence of about **4,800 image presentations**, and this is
+the basic unit for everything that follows: one row of the design matrix per
+image, and one yes/no question per image (*did a licking bout start on it?*). Most
+images are ordinary repeats, but three kinds are special and do the real work in
+the model:
+
+* a **change image** — the picture differs from the previous one; this is what the
+  mouse is rewarded for licking to;
+* an **omitted image** — the image is withheld and the gray screen simply
+  continues (5% of images, used as distractors);
+* a **post-omission image** — the first ordinary image immediately after an
+  omission.
+
 **Today's goal (Notebooks 1–7):** understand *why* and *how* that model works by
 fitting it to synthetic mice whose true strategy we know. We start at the very
 bottom of the pipeline: turning raw licks and the stimulus stream into the
@@ -24,7 +40,7 @@ bottom of the pipeline: turning raw licks and the stimulus stream into the
 
 **In this notebook you will:**
 1. Segment a stream of licks into **bouts**.
-2. Reduce each session to a per-flash outcome: *did a bout start on this image?*
+2. Reduce each session to a per-image outcome: *did a bout start on this image?*
 3. Build the five-column **design matrix** $X$ (Figure 1C).
 """),
     md(r"""
@@ -45,16 +61,16 @@ import swcbehav as sb
 We generate one synthetic mouse. For now treat `make_mouse` as a black box — we
 open it up in Notebook 2. This mouse uses the **visual** strategy.
 
-Each row of `sess.table` is one image flash. The **observable** columns are the
+Each row of `sess.table` is one image. The **observable** columns are the
 ones a real experiment would give you:
 
 | column | meaning |
 |---|---|
-| `time` | onset of the flash (s) |
+| `time` | onset of the image (s) |
 | `is_change` | the image differs from the previous one |
 | `is_omission` | the image was withheld (gray screen) |
-| `is_post_omission` | first flash after an omission |
-| `bout_start` | a licking bout started on this flash |
+| `is_post_omission` | first image after an omission |
+| `bout_start` | a licking bout started on this image |
 
 Columns beginning `true_` are **hidden ground truth** (the weights and lick
 probability that generated the data). We'll peek at them only to check our work —
@@ -62,7 +78,7 @@ never as an input to analysis.
 """),
     code(r"""
 sess = sb.make_mouse("visual", seed=0)
-print(f"{len(sess.table)} flashes, {len(sess.lick_times)} licks")
+print(f"{len(sess.table)} images, {len(sess.lick_times)} licks")
 sess.table.head(8)
 """),
     md(r"""
@@ -115,37 +131,37 @@ print(f"found {len(bouts)} bouts; matches the reference implementation: "
       f"{np.array_equal(bouts, reference)}")
 """),
     md(r"""
-## 3. From bouts to a per-flash outcome
+## 3. From bouts to a per-image outcome
 
-The model predicts a **single binary outcome per flash**: did a licking bout
+The model predicts a **single binary outcome per image**: did a licking bout
 *start* during this image's 750 ms window? That vector, $y$, is what we'll later
 regress against the strategies.
 
-**Exercise 2.** Fill in `bout_starts_per_flash`: map each bout's *start time* to
-the flash whose window contains it.
-*Hint:* flash $i$ covers $[\,t_0 + i\cdot\Delta,\; t_0 + (i{+}1)\cdot\Delta\,)$
-where $\Delta$ = `sb.FLASH_DURATION`.
+**Exercise 2.** Fill in `bout_starts_per_image`: map each bout's *start time* to
+the image whose window contains it.
+*Hint:* image $i$ covers $[\,t_0 + i\cdot\Delta,\; t_0 + (i{+}1)\cdot\Delta\,)$
+where $\Delta$ = `sb.IMAGE_DURATION`.
 """),
     code(
         solution=r"""
-def bout_starts_per_flash(sess, bouts):
+def bout_starts_per_image(sess, bouts):
     onset = sess.table["time"].to_numpy()
     y = np.zeros(len(onset), dtype=bool)
-    idx = np.floor((bouts[:, 0] - onset[0]) / sb.FLASH_DURATION).astype(int)
+    idx = np.floor((bouts[:, 0] - onset[0]) / sb.IMAGE_DURATION).astype(int)
     idx = idx[(idx >= 0) & (idx < len(onset))]
     y[idx] = True
     return y
 
-y = bout_starts_per_flash(sess, bouts)
+y = bout_starts_per_image(sess, bouts)
 """,
         student=r"""
-def bout_starts_per_flash(sess, bouts):
+def bout_starts_per_image(sess, bouts):
     onset = sess.table["time"].to_numpy()
     y = np.zeros(len(onset), dtype=bool)
-    # YOUR CODE HERE: find the flash index for each bout start time and set y=True there.
+    # YOUR CODE HERE: find the image index for each bout start time and set y=True there.
     raise NotImplementedError
 
-y = bout_starts_per_flash(sess, bouts)
+y = bout_starts_per_image(sess, bouts)
 """,
     ),
     md(r"""
@@ -184,15 +200,15 @@ plt.show()
     md(r"""
 ## 5. Build the design matrix
 
-Now assemble everything into the design matrix $X$ — one row per flash, five
+Now assemble everything into the design matrix $X$ — one row per image, five
 columns:
 
 | column | value |
 |---|---|
 | `bias` | 1 everywhere (overall drive to lick) |
 | `visual` | 1 on image changes |
-| `omission` | 1 on omitted flashes |
-| `post_omission` | 1 on the flash after an omission |
+| `omission` | 1 on omitted images |
+| `post_omission` | 1 on the image after an omission |
 | `timing` | the waiting-time sigmoid from §4 |
 
 **Exercise 3 (the payoff).** Complete `build_design_matrix`. Use
@@ -232,7 +248,7 @@ print("design matrix shape:", X.shape)
     ),
     md(r"""
 Check it against the backend, then visualize a slice — this is the paper's
-Figure 1C: each strategy's expected contribution across a run of flashes.
+Figure 1C: each strategy's expected contribution across a run of images.
 """),
     code(r"""
 # Compare against the backend built from the SAME bout vector, so we're checking
@@ -247,7 +263,7 @@ plt.show()
 ## Wrap-up
 
 You turned a raw lick stream into the exact object the strategy model consumes:
-a per-flash outcome $y$ and a design matrix $X$ whose columns are the five
+a per-image outcome $y$ and a design matrix $X$ whose columns are the five
 candidate strategies. You also saw the one regressor (timing) that depends on the
 animal's own history.
 

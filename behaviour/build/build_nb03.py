@@ -29,7 +29,7 @@ from scipy.optimize import minimize
 import swcbehav as sb
 
 def get_Xy(sess):
-    # Observable design matrix X and per-flash outcome y for a session.
+    # Observable design matrix X and per-image outcome y for a session.
     X, cols = sb.build_design_matrix(sess.table)
     y = sess.table["bout_start"].to_numpy().astype(float)
     return X, y, cols
@@ -37,14 +37,14 @@ def get_Xy(sess):
     md(r"""
 ## 1. The model and its likelihood
 
-The model predicts the probability that a licking bout starts on flash $t$ from
+The model predicts the probability that a licking bout starts on image $t$ from
 the design row $x_t$ and a weight vector $w$:
 
 $$p_t = \sigma(w \cdot x_t), \qquad \sigma(z) = \frac{1}{1 + e^{-z}}.$$
 
-Each flash is a coin flip (Bernoulli): a bout starts ($y_t = 1$) with probability
-$p_t$. Assuming flashes are independent given $w$, the probability of the whole
-observed lick pattern is the product over flashes, and its logarithm — the
+Each image is a coin flip (Bernoulli): a bout starts ($y_t = 1$) with probability
+$p_t$. Assuming images are independent given $w$, the probability of the whole
+observed lick pattern is the product over images, and its logarithm — the
 **log-likelihood** — is a sum:
 
 $$\log \mathcal{L}(w) = \sum_t \Big[\, y_t \log p_t + (1 - y_t)\log(1 - p_t)\,\Big]
@@ -61,13 +61,13 @@ optimizers minimize.
     code(
         solution=r"""
 def neg_log_likelihood(w, X, y, l2=1e-4):
-    z = X @ w                                   # w . x for every flash
+    z = X @ w                                   # w . x for every image
     log_lik = np.sum(y * z - np.logaddexp(0.0, z))
     return -log_lik + l2 * np.sum(w ** 2)       # ridge = weak Gaussian prior (MAP)
 """,
         student=r"""
 def neg_log_likelihood(w, X, y, l2=1e-4):
-    z = X @ w                                   # w . x for every flash
+    z = X @ w                                   # w . x for every image
     # YOUR CODE HERE: log_lik = sum_t [ y_t * z_t - log(1 + exp(z_t)) ]
     # use np.logaddexp(0.0, z) for the log(1 + exp(z)) term.
     raise NotImplementedError
@@ -145,7 +145,7 @@ Fitted bars track the true bars across all three mice. A few things worth saying
 out loud:
 
 * The weights are **log-odds**. A bias of $-3$ means a baseline bout probability
-  of $\sigma(-3) \approx 0.05$; adding a visual weight of $+5$ on a change flash
+  of $\sigma(-3) \approx 0.05$; adding a visual weight of $+5$ on a change image
   gives $\sigma(-3 + 5) = \sigma(2) \approx 0.88$ — the hit rate we measured in
   Notebook 2.
 * The **omission** and **post-omission** weights wobble more around their true

@@ -26,7 +26,7 @@ from scipy.stats import rankdata
 import swcbehav as sb
 
 def get_Xy(sess):
-    # Observable design matrix and per-flash bout outcome.
+    # Observable design matrix and per-image bout outcome.
     X, cols = sb.build_design_matrix(sess.table)
     y = sess.table["bout_start"].to_numpy().astype(float)
     return X, y, cols
@@ -35,28 +35,28 @@ def get_Xy(sess):
 sess = sb.make_mouse("visual", seed=0)
 X, y, cols = get_Xy(sess)
 w = sb.fit_static(X, y)
-scores = sb.predict_prob(w, X)      # model probability of a bout on each flash
+scores = sb.predict_prob(w, X)      # model probability of a bout on each image
 """),
     md(r"""
 ## 1. Why not just use accuracy?
 
-Licking bouts are rare — most flashes have no bout. So a lazy model that predicts
+Licking bouts are rare — most images have no bout. So a lazy model that predicts
 "never lick" is *right* most of the time and yet tells us nothing. Accuracy is
 dominated by the majority class.
 """),
     code(r"""
 base_rate = y.mean()
-naive_accuracy = 1 - base_rate     # "never lick" is right on every non-bout flash
-print(f"bouts occur on {base_rate:.1%} of flashes")
+naive_accuracy = 1 - base_rate     # "never lick" is right on every non-bout image
+print(f"bouts occur on {base_rate:.1%} of images")
 print(f"a 'never lick' model has accuracy {naive_accuracy:.1%} -- and zero value")
 """),
     md(r"""
 ## 2. The ROC curve
 
-The model outputs a *probability* per flash, not a yes/no. Turn it into a
+The model outputs a *probability* per image, not a yes/no. Turn it into a
 decision by thresholding: predict "bout" when the score exceeds some cutoff. Each
 cutoff gives a **true-positive rate** (bouts correctly flagged) and a
-**false-positive rate** (quiet flashes wrongly flagged). Sweeping the cutoff
+**false-positive rate** (quiet images wrongly flagged). Sweeping the cutoff
 traces the **ROC curve**. A useless model hugs the diagonal; a good one bows
 toward the top-left.
 """),
@@ -74,17 +74,17 @@ plt.show()
 
 The **area under the ROC curve** summarizes it in a single threshold-free number.
 It has a clean interpretation: **the probability that the model gives a higher
-score to a randomly chosen bout flash than to a randomly chosen quiet flash.**
+score to a randomly chosen bout image than to a randomly chosen quiet image.**
 0.5 is chance, 1.0 is perfect. That interpretation gives a shortcut to compute it
 — no threshold sweep needed — from the **ranks** of the scores:
 
 $$\text{AUC} = \frac{R_{+} - n_{+}(n_{+}+1)/2}{n_{+}\,n_{-}},$$
 
-where $R_{+}$ is the summed rank of the bout flashes and $n_{+}, n_{-}$ are the
-counts of bout / quiet flashes.
+where $R_{+}$ is the summed rank of the bout images and $n_{+}, n_{-}$ are the
+counts of bout / quiet images.
 
 **Exercise 1.** Complete `auc_score`. `rankdata` (imported above) returns ranks
-and averages ties correctly — important here, because many flashes share an
+and averages ties correctly — important here, because many images share an
 identical design row and hence an identical score.
 """),
     code(
@@ -112,9 +112,9 @@ print("backend AUC  :", round(sb.auc_score(scores, y), 3))
 ## 4. Cross-validation: an honest score
 
 That AUC was measured on the **same data** we fit — it's optimistic. The fair
-test is prediction on **held-out** flashes. We split the session into contiguous
+test is prediction on **held-out** images. We split the session into contiguous
 time blocks, fit on all but one, score the one left out, and repeat. (Contiguous
-blocks, not random flashes, so neighboring flashes don't leak between train and
+blocks, not random images, so neighboring images don't leak between train and
 test.)
 
 **Exercise 2.** Fill in the fit-and-score step inside the cross-validation loop.
@@ -159,7 +159,7 @@ model in Notebook 7 can chase noise if its smoothing is too loose).
 
 Finally, the population view behind Figure 2A. The static model predicts
 **static** mice well. On **dynamic** mice — whose strategy drifts — one fixed
-weight vector trained on early flashes predicts late flashes poorly, so its
+weight vector trained on early images predicts late images poorly, so its
 held-out AUC sags. That gap is the quantitative case for the dynamic model.
 """),
     code(r"""

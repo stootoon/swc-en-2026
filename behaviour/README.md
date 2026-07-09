@@ -56,5 +56,5 @@ Notebook 7 extends it to a mouse whose strategy drifts.
 
 The synthetic task is deliberately simplified for teaching (documented in
 `swcbehav/task.py` and `generate.py`): the change schedule is open-loop (licking
-doesn't delay changes), and a fresh licking bout may begin on any flash. These
+doesn't delay changes), and a fresh licking bout may begin on any image. These
 keep the focus on the statistics without changing what the analyses teach.

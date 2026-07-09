@@ -35,7 +35,7 @@ def fit_static(X, y, l2=1e-4):
 
 
 def predict_prob(w, X):
-    """Model probability that a bout starts on each flash."""
+    """Model probability that a bout starts on each image."""
     return sigmoid(X @ w)
 
 
@@ -71,7 +71,7 @@ def cross_val_auc(X, y, n_folds=5, l2=1e-4):
     """Cross-validated AUC using contiguous time-block folds.
 
     Contiguous (not random) folds respect the session's temporal structure, so
-    held-out performance isn't inflated by leakage between adjacent flashes.
+    held-out performance isn't inflated by leakage between adjacent images.
     """
     y = np.asarray(y, float)
     n = len(y)
@@ -89,13 +89,13 @@ def cross_val_auc(X, y, n_folds=5, l2=1e-4):
 # Which strategies matter: ablation (Notebook 5)                              #
 # --------------------------------------------------------------------------- #
 def mean_log_likelihood(w, X, y):
-    """Average per-flash Bernoulli log-likelihood (nats). Higher is better."""
+    """Average per-image Bernoulli log-likelihood (nats). Higher is better."""
     z = X @ w
     return float(np.mean(y * z - np.logaddexp(0.0, z)))
 
 
 def cross_val_loglik(X, y, n_folds=5, l2=1e-4):
-    """Held-out predictive log-likelihood per flash, averaged over folds."""
+    """Held-out predictive log-likelihood per image, averaged over folds."""
     y = np.asarray(y, float)
     n = len(y)
     folds = np.array_split(np.arange(n), n_folds)
@@ -122,7 +122,7 @@ def ablation_loglik_deltas(X, y, col_names, n_folds=5):
 def dynamic_neg_log_posterior(W_flat, X, y, sigma, T, K):
     """Negative log posterior of a drifting-weight (random-walk) logistic model.
 
-    Objective = Bernoulli NLL (each flash t uses its own weights w_t)
+    Objective = Bernoulli NLL (each image t uses its own weights w_t)
               + (1 / 2 sigma^2) * sum_t || w_{t+1} - w_t ||^2   (random-walk prior).
 
     Returns (objective, gradient) so the optimizer can use the analytic gradient.

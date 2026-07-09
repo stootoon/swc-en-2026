@@ -34,7 +34,7 @@ def get_Xy(sess):
 dyn = sb.make_mouse("dynamic", n_images=2500, seed=1)
 X, y, cols = get_Xy(dyn)
 T, K = X.shape
-print(f"dynamic mouse: {T} flashes, {K} strategies")
+print(f"dynamic mouse: {T} images, {K} strategies")
 """),
     md(r"""
 ## The problem: one static fit can't move
@@ -59,7 +59,7 @@ in a short window around each time point — and let the window slide. Then the
 weights are allowed to differ at different times.
 
 **Exercise 1.** Complete `sliding_window_fit`: at each window center, fit the
-static model to just the flashes inside a window of half-width `half`.
+static model to just the images inside a window of half-width `half`.
 """),
     code(
         solution=r"""
@@ -77,7 +77,7 @@ W_win = sliding_window_fit(X, y, centers)
 def sliding_window_fit(X, y, centers, half=150):
     W = np.zeros((len(centers), X.shape[1]))
     for i, c in enumerate(centers):
-        # YOUR CODE HERE: fit the static model to flashes in [c-half, c+half]
+        # YOUR CODE HERE: fit the static model to images in [c-half, c+half]
         # and store the weights in W[i].
         raise NotImplementedError
     return W
@@ -91,13 +91,13 @@ plt.figure(figsize=(11, 3.2))
 for k, name in [(1, "visual"), (4, "timing")]:
     line, = plt.plot(centers, W_win[:, k], "o-", ms=3, label=f"{name} (windows)")
     plt.plot(dyn.true_weights[:, k], color=line.get_color(), alpha=0.4, lw=3)
-plt.axhline(0, color="0.7", lw=0.8); plt.xlabel("image flash"); plt.ylabel("weight")
+plt.axhline(0, color="0.7", lw=0.8); plt.xlabel("image"); plt.ylabel("weight")
 plt.title("sliding windows follow the drift -- but jump around"); plt.legend()
 plt.show()
 """),
     md(r"""
 Better! The window weights *do* follow the true drift (thick pale lines). But
-they're jumpy: each window is fit independently on only a few hundred flashes, so
+they're jumpy: each window is fit independently on only a few hundred images, so
 noise makes neighboring windows disagree more than the animal actually changed.
 And we had to pick a window width by hand. We want the *smoothness* to come from a
 principled assumption, not an arbitrary window.
@@ -109,14 +109,14 @@ independently, state that the weights **evolve gradually**:
 
 $$w_{t+1} = w_t + \eta_t, \qquad \eta_t \sim \mathcal{N}(0, \sigma^2 I).$$
 
-Each flash's weights are a small random step from the previous flash's. As a
+Each image's weights are a small random step from the previous image's. As a
 prior, this says a trajectory is *a priori* more probable when consecutive weights
 are close — it **penalizes big jumps**. The negative-log of that prior is exactly
 a smoothness penalty:
 
 $$\text{penalty}(W) = \frac{1}{2\sigma^2}\sum_{t=1}^{T-1}\lVert w_{t+1} - w_t\rVert^2 .$$
 
-$\sigma$ controls how much drift we expect per flash: small $\sigma$ forbids
+$\sigma$ controls how much drift we expect per image: small $\sigma$ forbids
 change, large $\sigma$ permits it.
 
 ## Step 3 — the objective
@@ -124,12 +124,12 @@ change, large $\sigma$ permits it.
 Fitting means finding the whole weight trajectory $W$ (a $T \times K$ array) that
 best trades off **fitting the licks** against **staying smooth**. So we minimize
 
-$$\underbrace{-\sum_t \big[y_t z_t - \log(1+e^{z_t})\big]}_{\text{data: each flash uses its own } w_t}
+$$\underbrace{-\sum_t \big[y_t z_t - \log(1+e^{z_t})\big]}_{\text{data: each image uses its own } w_t}
 \;+\; \underbrace{\frac{1}{2\sigma^2}\sum_t \lVert w_{t+1}-w_t\rVert^2}_{\text{random-walk prior}},
 \qquad z_t = w_t \cdot x_t .$$
 
 The data term is the same Bernoulli likelihood as Notebook 3 — only now each
-flash has its *own* weights. We supply the gradient too, so the optimizer is
+image has its *own* weights. We supply the gradient too, so the optimizer is
 fast. The data-term gradient is the familiar logistic $(p_t - y_t)\,x_t$; the
 penalty's gradient is the discrete second difference $w_{t-1} - 2w_t + w_{t+1}$.
 
@@ -142,7 +142,7 @@ gradient, carried over from Notebook 3) is provided.
 def dynamic_objective(W_flat, X, y, sigma):
     T, K = X.shape
     W = W_flat.reshape(T, K)
-    z = np.sum(W * X, axis=1)                      # w_t . x_t for every flash
+    z = np.sum(W * X, axis=1)                      # w_t . x_t for every image
     data = -np.sum(y * z - np.logaddexp(0.0, z))   # Bernoulli NLL (from NB3)
     grad = (sb.sigmoid(z) - y)[:, None] * X        # data-term gradient (from NB3)
 
@@ -159,7 +159,7 @@ def dynamic_objective(W_flat, X, y, sigma):
 def dynamic_objective(W_flat, X, y, sigma):
     T, K = X.shape
     W = W_flat.reshape(T, K)
-    z = np.sum(W * X, axis=1)                      # w_t . x_t for every flash
+    z = np.sum(W * X, axis=1)                      # w_t . x_t for every image
     data = -np.sum(y * z - np.logaddexp(0.0, z))   # Bernoulli NLL (from NB3)
     grad = (sb.sigmoid(z) - y)[:, None] * X        # data-term gradient (from NB3)
 
@@ -233,14 +233,14 @@ sm = lambda v: np.convolve(v, box, mode="same")
 plt.figure(figsize=(11, 2.6))
 plt.plot(sm(y), color="0.6", label="data (smoothed)")
 plt.plot(sm(p_model), color="k", label="model (smoothed)")
-plt.xlabel("image flash"); plt.ylabel("lick probability"); plt.legend()
+plt.xlabel("image"); plt.ylabel("lick probability"); plt.legend()
 plt.title("dynamic model tracks the time-varying licking rate")
 plt.show()
 """),
     md(r"""
 ## Step 6 — the smoothing dial $\sigma$
 
-$\sigma$ sets how much drift the prior allows per flash. It interpolates between
+$\sigma$ sets how much drift the prior allows per image. It interpolates between
 the two models we already know:
 
 * **small $\sigma$** — jumps are heavily penalized, so the trajectory is nearly
@@ -271,7 +271,7 @@ for s, ls in [(0.005, ":"), (0.05, "-"), (0.4, "--")]:
     W = fit_dynamic(X, y, sigma=s)
     ax[1].plot(W[:, 1], ls, color="tab:green", label=f"visual, sigma={s}")
 ax[1].plot(truth[:, 0], color="k", alpha=0.4, lw=3, label="true visual")
-ax[1].set_xlabel("image flash"); ax[1].set_ylabel("weight")
+ax[1].set_xlabel("image"); ax[1].set_ylabel("weight")
 ax[1].set_title("under- vs over-smoothing"); ax[1].legend(fontsize=7)
 plt.tight_layout(); plt.show()
 """),
@@ -279,7 +279,7 @@ plt.tight_layout(); plt.show()
 ## Wrap-up — the whole day in one picture
 
 You built the paper's **dynamic logistic regression** from its pieces: a
-per-flash logistic likelihood (Notebook 3), a random-walk prior that ties
+per-image logistic likelihood (Notebook 3), a random-walk prior that ties
 neighboring time points together, and a smoothing parameter $\sigma$ that dials
 continuously between the static fit and the raw sliding-window estimate. Fit to
 the dynamic mouse, it recovers a *changing* strategy — the crossover the static

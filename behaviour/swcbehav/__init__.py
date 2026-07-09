@@ -5,7 +5,7 @@ Piet et al. (2024) analysis notebooks. Notebooks import prerequisites from here
 so each one runs standalone.
 """
 
-from .task import make_session, FLASH_DURATION
+from .task import make_session, IMAGE_DURATION
 from .generate import (
     Session,
     make_mouse,
@@ -44,7 +44,7 @@ from . import plotting
 
 __all__ = [
     "make_session",
-    "FLASH_DURATION",
+    "IMAGE_DURATION",
     "Session",
     "make_mouse",
     "simulate",
