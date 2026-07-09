@@ -63,6 +63,53 @@ def plot_design_matrix(X, col_names, table, start=0, n=40, ax=None):
     return ax
 
 
+def plot_regressors_and_licks(sess, X, col_names, start=0, n=40):
+    """Stack the annotated lick raster over the design-matrix slice (shared x).
+
+    Top panel: licks, bouts, and task events over a window of images (same
+    annotations as ``plot_session_raster``). Bottom panel: the design-matrix
+    columns for the *same* images. Lets students see how each regressor lines up
+    with the behavior it is meant to explain. Events are drawn at the centre of
+    their image column so they sit over the corresponding regressor cell.
+    """
+    from .design import segment_bouts
+
+    i0, i1 = start, start + n
+    fig, (ax_r, ax_m) = plt.subplots(2, 1, figsize=(11, 4.6), sharex=True,
+                                     gridspec_kw={"height_ratios": [1.0, 1.2]})
+    t = sess.table
+    win = t[(t["image_index"] >= i0) & (t["image_index"] < i1)]
+
+    # --- top: raster, x in image-index units (image i spans [i, i+1)) ---
+    for idx in win.loc[win["is_change"], "image_index"]:
+        ax_r.axvline(idx + 0.5, color="tab:blue", lw=1.5, zorder=1)
+    for idx in win.loc[win["is_omission"], "image_index"]:
+        ax_r.axvline(idx + 0.5, color="tab:cyan", ls="--", lw=1, zorder=1)
+    for b0, b1 in segment_bouts(sess.lick_times):
+        x0, x1 = b0 / IMAGE_DURATION, b1 / IMAGE_DURATION
+        if x1 >= i0 and x0 <= i1:
+            ax_r.axvspan(x0, x1, color="0.85", zorder=0)
+    licks = sess.lick_times / IMAGE_DURATION
+    licks = licks[(licks >= i0) & (licks <= i1)]
+    ax_r.vlines(licks, 0.0, 1.0, color="k", lw=0.8, zorder=2)
+    hits = win.loc[win["is_hit"], "image_index"].to_numpy()
+    ax_r.plot(hits + 0.5, np.full(len(hits), 1.15), "v", color="tab:red", ms=6, zorder=3)
+    ax_r.set_ylim(-0.1, 1.3)
+    ax_r.set_yticks([])
+    ax_r.set_ylabel("licks")
+
+    # --- bottom: design matrix, columns aligned to the same image indices ---
+    im = ax_m.imshow(X[i0:i1].T, aspect="auto", cmap="magma", vmin=0, vmax=1,
+                     interpolation="nearest",
+                     extent=[i0, i1, len(col_names) - 0.5, -0.5])
+    ax_m.set_yticks(range(len(col_names)))
+    ax_m.set_yticklabels(col_names)
+    ax_m.set_xlabel("image")
+    ax_r.set_xlim(i0, i1)
+    fig.colorbar(im, ax=[ax_r, ax_m], fraction=0.03, pad=0.02, label="regressor value")
+    return ax_r, ax_m
+
+
 def plot_weights(true_weights=None, fit_weights=None, col_names=None, time=None,
                 ax=None):
     """Overlay true and/or fitted strategy-weight trajectories over a session."""

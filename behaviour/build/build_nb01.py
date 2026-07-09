@@ -82,9 +82,15 @@ print(f"{len(sess.table)} images, {len(sess.lick_times)} licks")
 sess.table.head(8)
 """),
     md(r"""
-Here are ~25 s of the session. Black ticks are licks, grey spans are licking
-bouts, blue lines mark image changes, and red triangles mark rewarded changes
-(hits). Notice this mouse licks almost exclusively right after a change.
+Here are ~25 s of the session — your first look at the raw behavior:
+
+- *Black ticks* are licks
+- *Grey spans* are licking bouts
+- *Solid blue lines* mark image changes
+- *Dashed cyan lines* mark omissions (the image is withheld — a 5% distractor)
+- *Red triangles* mark rewarded changes (hits)
+
+Notice this mouse licks almost exclusively right after a change.
 """),
     code(r"""
 sb.plotting.plot_session_raster(sess, t0=560, t1=585)
@@ -247,8 +253,20 @@ print("design matrix shape:", X.shape)
 """,
     ),
     md(r"""
-Check it against the backend, then visualize a slice — this is the paper's
-Figure 1C: each strategy's expected contribution across a run of images.
+Check it against the backend, then look at the design matrix **next to the
+behavior it is meant to explain**. The bottom panel is the design matrix for a
+window of images — the paper's Figure 1C — and the top panel is the same mouse's
+licking over those very same images (annotated as before). Reading down each
+column, you can see the regressors line up with what the mouse did:
+
+- the **visual** row lights up on changes — exactly where this mouse licks;
+- the **timing** row ramps up the longer it has been since the last bout;
+- the **omission** and **post_omission** rows fire on the withheld images and the
+  image immediately after.
+
+(This window is chosen to contain omissions, so all five rows are active — the
+model doesn't yet *know* which regressors matter; that's what fitting decides,
+starting in Notebook 3.)
 """),
     code(r"""
 # Compare against the backend built from the SAME bout vector, so we're checking
@@ -256,7 +274,7 @@ Figure 1C: each strategy's expected contribution across a run of images.
 X_ref, _ = sb.build_design_matrix(sess.table, bout_start=y)
 print("matches reference:", np.allclose(X, X_ref))
 
-sb.plotting.plot_design_matrix(X, col_names, sess.table, start=760, n=40)
+sb.plotting.plot_regressors_and_licks(sess, X, col_names, start=4398, n=40)
 plt.show()
 """),
     md(r"""
