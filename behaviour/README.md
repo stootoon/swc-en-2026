@@ -43,8 +43,8 @@ In each notebook, select the **"SWC Behaviour (.venv)"** kernel.
 |---|----------|-----------|-------|
 | 6+ | (bonus section in `06_mixtures`) | correlation & linear fit | Fig 2E |
 | 9 | `09_individual_differences` | variance partitioning; permutation test | Fig 2H |
-| 10 | `10_multiple_comparisons` | t-tests; Bonferroni & Benjamini–Hochberg (FDR) | Fig 4 |
-| 11 | `11_hierarchical_bootstrap` | hierarchical bootstrap for nested data | Fig 4 |
+| 10 | `10_multiple_comparisons` | t-tests; Bonferroni & Benjamini–Hochberg (FDR) | general |
+| 11 | `11_hierarchical_bootstrap` | hierarchical bootstrap for nested data | general |
 
 Notebooks 3–6 build the **fit → evaluate → ablate** cycle on fixed-strategy mice;
 Notebook 7 extends it to a mouse whose strategy drifts. Part 2 (9–11) moves to

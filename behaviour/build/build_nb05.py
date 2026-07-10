@@ -157,6 +157,43 @@ while removing omission, post-omission, or timing barely registers. On a
 single-strategy mouse the ablation points, unambiguously, at the one strategy we
 built in — the clean result that makes this the right place to trust the method.
 
+### Across the population (Figure 2D)
+
+One mouse gives one clean answer; the paper's Figure 2D shows the whole
+**distribution** — every session's ablation drop, for each strategy, across the
+dataset. Let's reproduce that shape over a population spanning the strategy spectrum
+(a coarser 3-fold CV keeps it quick). Each dot is a mouse; the black bar is the
+population mean.
+"""),
+    code(r"""
+population = [sb.make_mouse(name, seed=s)
+              for s in range(8) for name in ["visual", "timing", "mixed"]]
+order = ["omission", "post_omission", "visual", "timing"]
+dist = {s: [] for s in order}
+for sess in population:
+    X, y, cols = get_Xy(sess)
+    d = sb.ablation_loglik_deltas(X, y, cols, n_folds=3)
+    for s in order:
+        dist[s].append(d[s])
+
+plt.figure(figsize=(5.6, 4))
+jit = np.random.default_rng(0)
+for i, s in enumerate(order):
+    vals = np.array(dist[s])
+    plt.scatter(i + jit.uniform(-0.15, 0.15, len(vals)), vals, s=25, alpha=0.6)
+    plt.hlines(vals.mean(), i - 0.25, i + 0.25, color="k", lw=2)
+plt.axhline(0, color="0.7", lw=0.8)
+plt.xticks(range(len(order)), order, rotation=45, ha="right")
+plt.ylabel("drop in held-out LL when removed")
+plt.title("strategy contributions across the population (cf. Fig 2D)")
+plt.tight_layout(); plt.show()
+"""),
+    md(r"""
+Visual and timing carry large drops with a wide spread — large because mice rely on
+them, spread because *which* of the two dominates depends on the individual mouse (a
+timing mouse's visual drop is near zero, and vice versa). Omission and post-omission
+sit near zero throughout. That's the population-level version of Figure 2D.
+
 ## 3. The strategy index
 
 Piet et al. summarize each session with two numbers — how much the model leans on

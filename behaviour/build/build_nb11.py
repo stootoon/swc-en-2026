@@ -13,8 +13,8 @@ The last of the inference notebooks, and the one that takes **nesting** most
 seriously. Our data are nested — several sessions per mouse — and sessions from the
 same mouse are *not* independent (Notebook 9 showed mouse identity explains most of
 the variance). Ignoring that makes error bars too small and p-values too confident.
-The **hierarchical bootstrap** fixes it, and it's exactly what Piet et al. use for
-their neural error bars (Figure 4's "hierarchically bootstrapped SEM").
+The **hierarchical bootstrap** fixes it — it's the standard way to get honest error
+bars when your measurements come in groups rather than one flat independent sample.
 
 **In this notebook you will:**
 1. See why a naive error bar is too small for nested data.
@@ -172,21 +172,20 @@ print(f"  hierarchical CI : {100 * hier_cover / n_exp:.0f}%   (should be 95%)")
     md(r"""
 The naive interval covers the truth far less than 95% of the time — it's overconfident,
 which in practice means false positives. The hierarchical bootstrap lands near 95%,
-the coverage it promises. That calibration is why it's the right tool for nested
-neural and behavioural data, and why the paper uses it throughout Figure 4.
+the coverage it promises. That calibration is why it's the right tool whenever data
+come in groups — here, sessions nested within mice.
 
 ## Wrap-up — and the end of Part 2
 
-Across the three inference notebooks you built the tools for reasoning about a
+Across the inference notebooks you built the tools for reasoning about a whole
 *population*: correlation and linear fits (Notebook 6), variance partitioning and
 permutation tests (Notebook 9), multiple-comparison correction (Notebook 10), and
 now the hierarchical bootstrap. The recurring lesson is that **structure in the data
 — mice, sessions, many tests — has to be built into the inference**, and synthetic
-data lets you *prove* a method is calibrated rather than take it on faith.
-
-These last two tools (FDR and the hierarchical bootstrap) are precisely what the
-neural half of the course leans on for Figure 4 — so you arrive there already
-fluent in them.
+data lets you *prove* a method is calibrated rather than take it on faith. Together
+with Part 1's model of the single animal, you now have an end-to-end toolkit for the
+behaviour in Piet et al.'s Figures 1–3: from raw licks to a fitted strategy to
+population-level statistics.
 """),
 ]
 

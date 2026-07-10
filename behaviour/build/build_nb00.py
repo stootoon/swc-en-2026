@@ -78,8 +78,8 @@ skipped and left for self-study.
 |---|----------|----------------|-------------------|-------|
 | 6+ | *(bonus section in Notebook 6)* | a correlation & a linear fit | Pearson *r*, $R^2$, least-squares lines | Fig 2E |
 | 9 | Individual differences | variance partitioning; a permutation test | is an effect more than chance? testing without distributional assumptions | Fig 2H |
-| 10 | Multiple comparisons | t-tests; Bonferroni & Benjamini–Hochberg | keeping false positives in check across many tests | Fig 4 |
-| 11 | Hierarchical bootstrap | resampling for nested data | honest error bars when samples aren't independent | Fig 4 |
+| 10 | Multiple comparisons | t-tests; Bonferroni & Benjamini–Hochberg | keeping false positives in check across many tests | general tool |
+| 11 | Hierarchical bootstrap | resampling for nested data | honest error bars when samples aren't independent | general tool |
 """),
     md(r"""
 ## How the notebooks work

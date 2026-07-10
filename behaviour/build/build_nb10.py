@@ -11,11 +11,12 @@ cells = [
 
 Modular and skippable, like the rest of Part 2.
 
-Real analyses rarely run one test — they run dozens. Piet et al.'s neural results
-(Figure 4) compare cell types across conditions in *many* cells at once, and correct
-for it. This notebook builds that toolkit on a controlled problem where **we know
-which effects are real**, so we can *measure* whether a correction actually works —
-something you can never do on real data.
+Real analyses rarely run one test — they run dozens. The moment you screen many
+candidate effects at once — several predictors, many conditions, or every strategy
+in the design matrix — some will look "significant" by pure chance, and you have to
+account for it. This notebook builds that toolkit on a controlled problem where **we
+know which effects are real**, so we can *measure* whether a correction actually
+works — something you can never do on real data.
 
 **In this notebook you will:**
 1. Run a **t-test** and see exactly what its p-value means.
@@ -158,6 +159,29 @@ def benjamini_hochberg(pvals, alpha=0.05):
 
 print("BH rejects", benjamini_hochberg(pvals).sum(), "candidates")
 print("backend check:", sb.benjamini_hochberg(pvals).sum())
+"""),
+    md(r"""
+It helps to *see* what BH does. Plot the sorted p-values against their rank, with the
+sliding threshold $k\alpha/m$ (the BH line) and, for contrast, the flat uncorrected
+$\alpha$. BH keeps everything up to the last point that lies **below** the sloped
+line — a cutoff stricter than the naive $\alpha$ but far more forgiving than
+Bonferroni's $\alpha/m$.
+"""),
+    code(r"""
+m = len(pvals)
+srt = np.sort(pvals)
+k = np.arange(1, m + 1)
+n_rej = sb.benjamini_hochberg(pvals, 0.05).sum()
+plt.figure(figsize=(6, 4))
+plt.plot(k, srt, "o", ms=3, label="sorted p-values")
+plt.plot(k, 0.05 * k / m, "r-", label=r"BH threshold  $k\alpha/m$")
+plt.axhline(0.05, color="0.6", ls="--", label=r"uncorrected $\alpha=0.05$")
+plt.axhline(0.05 / m, color="tab:purple", ls=":", label=r"Bonferroni $\alpha/m$")
+plt.axvline(n_rej, color="tab:green", lw=1, label=f"BH cutoff (reject {n_rej})")
+plt.xlim(0, 60); plt.ylim(0, 0.06)
+plt.xlabel("rank k"); plt.ylabel("p-value"); plt.legend(fontsize=8)
+plt.title("Benjamini–Hochberg selects the cutoff")
+plt.show()
 """),
     md(r"""
 ## 4. Grading the methods against the truth
