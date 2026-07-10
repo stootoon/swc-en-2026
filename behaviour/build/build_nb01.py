@@ -42,6 +42,21 @@ bottom of the pipeline: turning raw licks and the stimulus stream into the
 1. Segment a stream of licks into **bouts**.
 2. Reduce each session to a per-image outcome: *did a bout start on this image?*
 3. Build the five-column **design matrix** $X$ (Figure 1C).
+
+---
+**The paper panels this notebook reproduces**
+
+<img src="../assets/paper/fig1a.png" width="460">
+
+*Fig. 1A — the change-detection task. Mice watch a stream of images and are
+rewarded for licking when the image changes; they might solve it by visually
+comparing successive images or by learning the average time between changes.*
+
+<img src="../assets/paper/fig1c.png" width="760">
+
+*Fig. 1C — from raw licking to model inputs: how each image presentation becomes a
+row of the five-strategy design matrix. Building that design matrix is this
+notebook's goal.*
 """),
     md(r"""
 ## Setup

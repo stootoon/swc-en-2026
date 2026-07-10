@@ -27,7 +27,8 @@ In each notebook, select the **"SWC Behaviour (.venv)"** kernel.
 
 | # | Notebook | Technique | Paper |
 |---|----------|-----------|-------|
-| 1 | `01_task_and_design_matrix` | bouts, the five-strategy design matrix | Fig 1C |
+| 0 | `00_roadmap` | orientation / roadmap (no exercises) | Fig 1A |
+| 1 | `01_task_and_design_matrix` | bouts, the five-strategy design matrix | Fig 1A, 1C |
 | 2 | `02_meet_the_mice` | strategy as a weight vector; behavioral signatures | Fig 1B |
 | 3 | `03_static_model` | logistic regression from scratch; weight recovery | Fig 1D |
 | 4 | `04_model_evaluation` | ROC, AUC, cross-validation | Fig 2A |
@@ -50,7 +51,10 @@ Notebook 7 extends it to a mouse whose strategy drifts.
 - `build/` — the source of truth for the notebooks. Each `build_nbNN.py` emits
   its student/solutions pair; `python build/build_all.py` regenerates them all.
   Edit a builder and rebuild, or edit the `.ipynb` directly — whichever you
-  prefer.
+  prefer. `build/make_preview.py` renders a self-contained HTML preview of every
+  notebook under `preview/` for fast review.
+- `assets/paper/` — panels cropped from `piet.pdf`, embedded in each notebook's
+  intro so students see the figure they're about to reproduce.
 
 ## Idealizations
 

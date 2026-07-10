@@ -20,6 +20,15 @@ cleanly: the analysis recovers the two axes as separately as we built them.
 1. Meet a mouse that disengages, and see it in the licking rate.
 2. Recover the hidden engagement state from **rolling rates** (Fig 3A–B).
 3. Show the recovered **strategy** is unchanged by engagement.
+
+---
+**The paper panel this notebook reproduces**
+
+<img src="../assets/paper/fig3b.png" width="720">
+
+*Fig. 3B — one session's lick-bout rate and reward rate over time, with the
+engaged/disengaged threshold. This notebook recovers that engagement state and
+shows it is a separate axis from strategy.*
 """),
     code(r"""
 import numpy as np

@@ -16,8 +16,18 @@ cross-validation. It's the machinery behind Figure 2A.
 
 **In this notebook you will:**
 1. See why plain accuracy is misleading when licking is rare.
-2. Build the **ROC curve** and summarize it with the **AUC**.
-3. Use **cross-validation** to get an honest, non-overfit score.
+2. Build a **ROC curve** from scratch and check it against the backend.
+3. Understand what the **AUC** means and compute it.
+4. Use **cross-validation** to get an honest, non-overfit score.
+
+---
+**The paper panel this notebook reproduces**
+
+<img src="../assets/paper/fig2a.png" width="320">
+
+*Fig. 2A — cross-validated model performance (area under the ROC curve) across
+sessions. This notebook builds the ROC / AUC / cross-validation machinery behind
+that number.*
 """),
     code(r"""
 import numpy as np
@@ -53,39 +63,124 @@ print(f"a 'never lick' model has accuracy {naive_accuracy:.1%} -- and zero value
     md(r"""
 ## 2. The ROC curve
 
-The model outputs a *probability* per image, not a yes/no. Turn it into a
-decision by thresholding: predict "bout" when the score exceeds some cutoff. Each
-cutoff gives a **true-positive rate** (bouts correctly flagged) and a
-**false-positive rate** (quiet images wrongly flagged). Sweeping the cutoff
-traces the **ROC curve**. A useless model hugs the diagonal; a good one bows
-toward the top-left.
+The model outputs a *probability* per image, not a yes/no. To turn it into an
+actual decision we pick a **threshold** and predict "bout" whenever the score is
+above it. Every threshold gives two numbers:
+
+- the **true-positive rate** (TPR) — of the images where a bout really started,
+  the fraction we correctly flagged;
+- the **false-positive rate** (FPR) — of the quiet images, the fraction we
+  wrongly flagged.
+
+A strict threshold (near 1) flags almost nothing: low TPR *and* low FPR — the
+bottom-left corner. A lax threshold (near 0) flags almost everything: high TPR
+*and* high FPR — the top-right corner. Sweeping the threshold from strict to lax
+traces a curve from $(0,0)$ to $(1,1)$ — the **ROC curve** (for "receiver
+operating characteristic", a name inherited from WWII radar). A model with no
+signal lies on the diagonal: it can only catch more bouts by raising false alarms
+at the same rate. A good model **bows toward the top-left**, catching most bouts
+while raising few false alarms.
+
+**Exercise 1.** Build the ROC curve yourself: for each threshold on a grid,
+predict `bout = score >= threshold` and compute the TPR and FPR.
+"""),
+    code(
+        solution=r"""
+def roc_curve(scores, y, n_thresholds=200):
+    y = np.asarray(y).astype(bool)
+    n_pos, n_neg = y.sum(), (~y).sum()
+    thresholds = np.linspace(1.0, 0.0, n_thresholds)     # strict -> lax
+    tpr = np.array([((scores >= thr) & y).sum() / n_pos for thr in thresholds])
+    fpr = np.array([((scores >= thr) & ~y).sum() / n_neg for thr in thresholds])
+    return fpr, tpr
+""",
+        student=r"""
+def roc_curve(scores, y, n_thresholds=200):
+    y = np.asarray(y).astype(bool)
+    n_pos, n_neg = y.sum(), (~y).sum()
+    thresholds = np.linspace(1.0, 0.0, n_thresholds)     # strict -> lax
+    # YOUR CODE HERE: for each threshold, predict bout = (scores >= thr), then
+    #   tpr = (# predicted bouts that are real bouts) / n_pos
+    #   fpr = (# predicted bouts that are actually quiet) / n_neg
+    raise NotImplementedError
+""",
+    ),
+    md(r"""
+Plot your curve against the backend's `sb.roc_curve` (which computes the same
+thing a faster way, by sorting the scores instead of sweeping a grid). They should
+trace the same path.
 """),
     code(r"""
-fpr, tpr = sb.roc_curve(scores, y)
-plt.figure(figsize=(4.5, 4.5))
-plt.plot(fpr, tpr, lw=2)
-plt.plot([0, 1], [0, 1], "k--", lw=1, label="chance")
+fpr, tpr = roc_curve(scores, y)
+fpr_ref, tpr_ref = sb.roc_curve(scores, y)
+plt.figure(figsize=(4.8, 4.8))
+plt.plot(fpr, tpr, lw=4, alpha=0.4, label="your ROC (threshold sweep)")
+plt.plot(fpr_ref, tpr_ref, "k--", lw=1.2, label="backend ROC")
+plt.plot([0, 1], [0, 1], color="0.7", lw=1, label="chance")
 plt.xlabel("false-positive rate"); plt.ylabel("true-positive rate")
 plt.title("ROC: visual mouse, static fit"); plt.legend()
 plt.show()
 """),
     md(r"""
-## 3. AUC — one number for the whole curve
+## 3. AUC — collapsing the curve to one number
 
-The **area under the ROC curve** summarizes it in a single threshold-free number.
-It has a clean interpretation: **the probability that the model gives a higher
-score to a randomly chosen bout image than to a randomly chosen quiet image.**
-0.5 is chance, 1.0 is perfect. That interpretation gives a shortcut to compute it
-— no threshold sweep needed — from the **ranks** of the scores:
+Comparing whole curves is awkward; we'd like a single summary number. The **area
+under the ROC curve** (AUC) is that number, and it has a strikingly concrete
+meaning:
 
-$$\text{AUC} = \frac{R_{+} - n_{+}(n_{+}+1)/2}{n_{+}\,n_{-}},$$
+> **AUC is the probability that the model gives a higher score to a randomly
+> chosen bout image than to a randomly chosen quiet image.**
 
-where $R_{+}$ is the summed rank of the bout images and $n_{+}, n_{-}$ are the
-counts of bout / quiet images.
+Picture drawing one image where a bout happened and one where it didn't, at
+random, and asking: did the model score the bout one higher? The AUC is the
+fraction of such pairs it gets in the *right order*. So **0.5** means it orders
+pairs no better than a coin flip (the diagonal), and **1.0** means it ranks
+*every* bout image above *every* quiet one (the top-left corner). Notice what AUC
+does **not** care about: only the *ordering* of the scores matters, never their
+exact values — it is a pure measure of discrimination.
+"""),
+    md(r"""
+### Computing it without checking every pair
 
-**Exercise 1.** Complete `auc_score`. `rankdata` (imported above) returns ranks
-and averages ties correctly — important here, because many images share an
-identical design row and hence an identical score.
+Comparing every bout image to every quiet image is $n_+ \times n_-$ comparisons —
+millions of them here. There is a shortcut through **ranks**. Sort all $n$ scores
+from smallest to largest and give each one its rank ($1$ for the smallest, up to
+$n$ for the largest). Take a single bout image whose rank is $r$: then exactly
+$r-1$ images score below it. Summing the ranks of *all* bout images gives a total
+$R_+$, which counts — for every bout image — how many images sit below it. But
+some of those lower-ranked images are *other bout images*, which we should not be
+counting. The number of bout-below-bout pairs is always
+$1 + 2 + \dots + n_+ = n_+(n_+{+}1)/2$. Subtract it, and what remains is exactly
+the number of **quiet images ranked below bout images** — the pairs we wanted.
+Divide by the total number of pairs $n_+ n_-$:
+
+$$\text{AUC} = \frac{R_+ - n_+(n_+{+}1)/2}{n_+\, n_-}.$$
+
+(Statisticians call the numerator the Mann–Whitney $U$ statistic.) Before trusting
+this, let's check it against brute-force pair-counting on a tiny example:
+"""),
+    code(r"""
+# 2 bout images (y=1) and 3 quiet ones (y=0), with made-up scores:
+toy_scores = np.array([0.2, 0.4, 0.5, 0.6, 0.8])
+toy_y      = np.array([0,   1,   0,   1,   0  ], dtype=bool)
+
+# brute force: over all (bout, quiet) pairs, fraction the model orders correctly
+pos = toy_scores[toy_y]; neg = toy_scores[~toy_y]
+correct = [s_pos > s_neg for s_pos in pos for s_neg in neg]
+print("brute-force AUC:", np.mean(correct))
+
+# rank formula
+ranks = rankdata(toy_scores)
+R_pos, n_pos, n_neg = ranks[toy_y].sum(), toy_y.sum(), (~toy_y).sum()
+print("rank-formula AUC:", (R_pos - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg))
+"""),
+    md(r"""
+Same answer — the formula is just the pair-counting done cleverly.
+
+**Exercise 2.** Complete `auc_score` using that formula. `rankdata` (imported at
+the top) returns the ranks and, importantly, **averages ties**: many images share
+an identical design row here and so get an identical score, and averaging their
+ranks is what keeps the count correct.
 """),
     code(
         solution=r"""
@@ -117,7 +212,7 @@ time blocks, fit on all but one, score the one left out, and repeat. (Contiguous
 blocks, not random images, so neighboring images don't leak between train and
 test.)
 
-**Exercise 2.** Fill in the fit-and-score step inside the cross-validation loop.
+**Exercise 3.** Fill in the fit-and-score step inside the cross-validation loop.
 """),
     code(
         solution=r"""

@@ -19,6 +19,15 @@ behavior — *before* we try to infer it by fitting (Notebook 3 onward).
 2. Read the behavioral **signature** of the visual and timing strategies.
 3. Recover the timing strategy straight from data, without peeking at truth.
 4. Meet the **dynamic** mouse whose strategy drifts across the session.
+
+---
+**The paper panel this notebook reproduces**
+
+<img src="../assets/paper/fig1b.png" width="560">
+
+*Fig. 1B — licking aligned to task events (image changes, omissions, and the number
+of images since the last bout). Each strategy leaves a different fingerprint here;
+this notebook builds the intuition for those signatures.*
 """),
     code(r"""
 import numpy as np

@@ -19,6 +19,15 @@ of Piet et al. (their Figure 1D), in small steps:
 2. Replace the patch with a principled model: a **random-walk prior** on the weights.
 3. Write down its objective, fit it, and **recover the drifting strategy**.
 4. Understand the smoothing parameter $\sigma$ as the dial between static and noisy.
+
+---
+**The paper panel this notebook reproduces**
+
+<img src="../assets/paper/fig1d.png" width="760">
+
+*Fig. 1D — the dynamic model's output: the strategy weights drifting across a
+session (middle) and the resulting licking probability tracking the data (bottom).
+This notebook builds the dynamic model that produces it.*
 """),
     code(r"""
 import numpy as np

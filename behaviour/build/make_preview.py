@@ -19,6 +19,7 @@ NB_DIR = os.path.join(ROOT, "notebooks")
 OUT = os.path.join(ROOT, "preview")
 
 NOTEBOOKS = [
+    ("00_roadmap", "0. Roadmap"),
     ("01_task_and_design_matrix", "1. Task → design matrix"),
     ("02_meet_the_mice", "2. Meet the mice"),
     ("03_static_model", "3. Static model"),
@@ -31,8 +32,10 @@ NOTEBOOKS = [
 
 
 def convert(ipynb):
+    # --embed-images base64-inlines the paper panels so the preview HTML is
+    # self-contained and never depends on relative asset paths.
     subprocess.run([sys.executable, "-m", "jupyter", "nbconvert", "--to", "html",
-                    "--output-dir", OUT, ipynb],
+                    "--embed-images", "--output-dir", OUT, ipynb],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 

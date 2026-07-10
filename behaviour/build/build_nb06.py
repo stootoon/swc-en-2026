@@ -23,6 +23,14 @@ mouse's strategy continuously.
 1. Generate mice along a **continuum** from pure-visual to pure-timing.
 2. Confirm the recovered **strategy index** tracks the true blend.
 3. Populate the strategy-space cloud of Figure 2F.
+
+---
+**The paper panel this notebook reproduces**
+
+<img src="../assets/paper/fig2f.png" width="420">
+
+*Fig. 2F — every session placed in strategy space by its visual index and timing
+index. This notebook populates that cloud using mice that blend the two strategies.*
 """),
     code(r"""
 import numpy as np
