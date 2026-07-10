@@ -37,15 +37,28 @@ In each notebook, select the **"SWC Behaviour (.venv)"** kernel.
 | 7 | `07_dynamic_model` | the random-walk / dynamic logistic regression | Fig 1D |
 | 8 | `08_engagement_optional` | strategy vs engagement (optional) | Fig 3 |
 
+*Part 2 — population-level inference (modular; run any subset):*
+
+| # | Notebook | Technique | Paper |
+|---|----------|-----------|-------|
+| 6+ | (bonus section in `06_mixtures`) | correlation & linear fit | Fig 2E |
+| 9 | `09_individual_differences` | variance partitioning; permutation test | Fig 2H |
+| 10 | `10_multiple_comparisons` | t-tests; Bonferroni & Benjamini–Hochberg (FDR) | Fig 4 |
+| 11 | `11_hierarchical_bootstrap` | hierarchical bootstrap for nested data | Fig 4 |
+
 Notebooks 3–6 build the **fit → evaluate → ablate** cycle on fixed-strategy mice;
-Notebook 7 extends it to a mouse whose strategy drifts.
+Notebook 7 extends it to a mouse whose strategy drifts. Part 2 (9–11) moves to
+population-level inference; the notebooks are self-contained and any section can be
+skipped.
 
 ## Structure
 
-- `swcbehav/` — the backend. Generates synthetic mice (`task.py`, `generate.py`)
-  and holds reference implementations of every technique (`design.py`,
-  `models.py`) plus plotting (`plotting.py`). Each notebook imports its
-  prerequisites from here, so **every notebook runs standalone**.
+- `swcbehav/` — the backend. Generates synthetic mice and cohorts (`task.py`,
+  `generate.py`) and holds reference implementations of every technique
+  (`design.py`, `models.py`, `stats.py`) plus plotting (`plotting.py`). Each
+  notebook imports its prerequisites from here, so **every notebook runs
+  standalone**, and each *section* uses backend references for anything a later
+  (possibly skipped) section needs.
 - `notebooks/` — paired files: `NN_name.ipynb` (student, with `# YOUR CODE HERE`
   blanks) and `NN_name_solutions.ipynb` (complete, pre-executed answer key).
 - `build/` — the source of truth for the notebooks. Each `build_nbNN.py` emits

@@ -28,6 +28,9 @@ NOTEBOOKS = [
     ("06_mixtures", "6. Mixtures"),
     ("07_dynamic_model", "7. Dynamic model"),
     ("08_engagement_optional", "8. Engagement (optional)"),
+    ("09_individual_differences", "9. Individual differences (Part 2)"),
+    ("10_multiple_comparisons", "10. Multiple comparisons (Part 2)"),
+    ("11_hierarchical_bootstrap", "11. Hierarchical bootstrap (Part 2)"),
 ]
 
 

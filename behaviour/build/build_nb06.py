@@ -151,6 +151,90 @@ for *either* strategy, so at intermediate blends the two indices trade off with
 some noise. Held-out prediction keeps this in check, but it's a real limit of
 inferring latent strategy from behavior alone.
 
+---
+## 4. (Optional add-on) Correlation and a linear fit — Figure 2E
+
+*Self-contained — you can skip it, or leave it for self-study, without affecting
+anything later.*
+
+Figures 2E and 2G ask a different kind of question from the rest of this notebook:
+not "what is *this* mouse's strategy?" but "across the population, do two measured
+quantities **move together**?" The tool for that is a **correlation** summarized by
+a straight-line (**linear**) fit. As a concrete case, let's ask whether a mouse's
+*recovered visual weight* predicts its *hit rate*, across mice with differing
+visual strength. First, build the population and measure the two quantities:
+"""),
+    code(r"""
+rng = np.random.default_rng(0)
+visual_weight, hit_rate = [], []
+for i in range(40):
+    v = rng.uniform(0.0, 5.0)                                   # this mouse's visual strength
+    b = rng.uniform(-4.0, -2.0)                                 # and its baseline lick drive
+    stim = sb.make_session(n_images=1200, seed=100 + i)
+    sess = sb.simulate(stim, sb.constant_weights(bias=b, visual=v, timing=1.0),
+                       seed=200 + i)
+    X, cols = sb.build_design_matrix(sess.table)
+    y = sess.table["bout_start"].to_numpy().astype(float)
+    visual_weight.append(sb.fit_static(X, y)[1])               # recovered visual weight
+    t = sess.table
+    hit_rate.append(t["bout_start"][t["is_change"]].mean())    # measured hit rate
+visual_weight, hit_rate = np.array(visual_weight), np.array(hit_rate)
+"""),
+    md(r"""
+Two numbers capture the relationship. **Pearson's $r$** measures how tightly the
+points hug a straight line (from $-1$ through $0$ to $+1$); its square **$R^2$** is
+the fraction of the variance in one quantity that the line through the other
+accounts for. The line itself, $y \approx a x + b$, comes from least squares (the
+`np.polyfit(x, y, 1)` you may know).
+
+**Exercise 3.** Complete `correlate`: return the least-squares slope and intercept,
+Pearson's $r$, and $R^2$. *Hints:* `np.polyfit(x, y, 1)` gives `(slope, intercept)`;
+`np.corrcoef(x, y)[0, 1]` gives $r$.
+"""),
+    code(
+        solution=r"""
+def correlate(x, y):
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    slope, intercept = np.polyfit(x, y, 1)
+    r = np.corrcoef(x, y)[0, 1]
+    return slope, intercept, r, r ** 2
+
+slope, intercept, r, r2 = correlate(visual_weight, hit_rate)
+print(f"r = {r:.2f},  R^2 = {r2:.2f}")
+""",
+        student=r"""
+def correlate(x, y):
+    x, y = np.asarray(x, float), np.asarray(y, float)
+    slope, intercept = np.polyfit(x, y, 1)
+    # YOUR CODE HERE: Pearson r (np.corrcoef) and R^2; return slope, intercept, r, r**2
+    raise NotImplementedError
+
+slope, intercept, r, r2 = correlate(visual_weight, hit_rate)
+print(f"r = {r:.2f},  R^2 = {r2:.2f}")
+"""),
+    code(r"""
+plt.figure(figsize=(5, 4))
+plt.scatter(visual_weight, hit_rate, s=30, alpha=0.7)
+xs = np.array([visual_weight.min(), visual_weight.max()])
+plt.plot(xs, slope * xs + intercept, "r-", lw=2, label=f"fit ($R^2$={r2:.2f})")
+plt.xlabel("recovered visual weight"); plt.ylabel("hit rate")
+plt.title(f"correlation across the population (r = {r:.2f})"); plt.legend()
+plt.show()
+"""),
+    md(r"""
+A correlation invites a significance question: could a slope this steep arise by
+chance from unrelated quantities? A quick, assumption-light way to check is a
+**permutation test** — scramble the pairing between the two quantities many times,
+each time recomputing $r$, and see how often chance alone beats what we observed.
+(Notebook 9 develops permutation tests properly; this is a preview.)
+"""),
+    code(r"""
+perm = np.array([abs(np.corrcoef(visual_weight, rng.permutation(hit_rate))[0, 1])
+                 for _ in range(2000)])
+p = (np.sum(perm >= abs(r)) + 1) / (len(perm) + 1)
+print(f"observed |r| = {abs(r):.2f};  permutation p = {p:.4f}")
+"""),
+    md(r"""
 ## Wrap-up
 
 The static cycle survives contact with mixed strategies: the strategy index

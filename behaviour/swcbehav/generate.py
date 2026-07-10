@@ -245,3 +245,45 @@ def make_mouse(archetype: str, n_images: int = 4800, seed: int = 0,
 
     engaged_arr = sample_engagement(len(stim), rng) if engaged else None
     return simulate(stim, weight_fn, engaged=engaged_arr, seed=mouse_seed + 1)
+
+
+# --------------------------------------------------------------------------- #
+# Cohorts: several sessions per mouse, for population-level inference          #
+# --------------------------------------------------------------------------- #
+@dataclass
+class CohortSession:
+    """One session within a cohort, tagged with its mouse and true strategy."""
+    mouse_id: int
+    session_index: int
+    latent: float        # the mouse's stable true strategy tilt (visual - timing)/2
+    session_tilt: float  # this session's tilt = latent + session-level noise
+    session: Session
+
+
+def make_cohort(n_mice=12, sessions_per_mouse=4, n_images=1200, base=2.5,
+               between_sd=2.2, within_sd=1.2, seed=0):
+    """Generate a cohort with a *nested* structure: sessions within mice.
+
+    Each mouse has a stable latent strategy tilt drawn once (variance
+    ``between_sd**2``); each of its sessions perturbs that tilt by session-level
+    noise (variance ``within_sd**2``). A positive tilt makes the mouse more
+    visual, a negative one more timing. Because we set the between- and
+    within-mouse variances ourselves, the "true" fraction of variance due to
+    mouse identity is known, which is what makes this a clean testbed for
+    permutation tests and hierarchical bootstrapping.
+    """
+    rng = np.random.default_rng(seed)
+    latents = rng.normal(0.0, between_sd, n_mice)
+    out = []
+    counter = 0
+    for m in range(n_mice):
+        for s in range(sessions_per_mouse):
+            tilt = latents[m] + rng.normal(0.0, within_sd)
+            visual = float(np.clip(base + tilt, 0.0, 7.0))
+            timing = float(np.clip(base - tilt, 0.0, 7.0))
+            stim = task_module.make_session(n_images=n_images, seed=1000 + counter)
+            weight_fn = constant_weights(bias=-3.0, visual=visual, timing=timing)
+            sess = simulate(stim, weight_fn, seed=5000 + counter)
+            out.append(CohortSession(m, s, float(latents[m]), float(tilt), sess))
+            counter += 1
+    return out

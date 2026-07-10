@@ -15,9 +15,18 @@ from .generate import (
     constant_weights,
     crossover_weights,
     sample_engagement,
+    CohortSession,
+    make_cohort,
     WEIGHT_NAMES,
     TIMING_MIDPOINT,
     TIMING_SLOPE,
+)
+from .stats import (
+    linear_fit,
+    variance_explained,
+    permutation_variance_explained,
+    benjamini_hochberg,
+    hierarchical_bootstrap,
 )
 from .design import (
     segment_bouts,

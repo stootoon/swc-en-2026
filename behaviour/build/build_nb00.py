@@ -51,10 +51,15 @@ spine of the whole module.
     md(r"""
 ## The day, notebook by notebook
 
-Each notebook is a short, self-contained step: a bit of statistics, an exercise or
-two where you implement the key idea, and a figure from the paper reproduced at the
-end. Notebooks 3–6 build a **fit → evaluate → ablate** cycle on mice with a fixed
-strategy; Notebook 7 extends it to a mouse whose strategy drifts.
+The module comes in two parts. **Part 1 (Notebooks 1–8)** builds a model of one
+animal's behaviour — Notebooks 3–6 are a **fit → evaluate → ablate** cycle on mice
+with a fixed strategy, and Notebook 7 extends it to a mouse whose strategy drifts.
+**Part 2 (Notebooks 9–11)** steps up to a whole *population* and the statistics of
+comparing across it. Every notebook is short and self-contained — a bit of
+statistics, an exercise or two, a paper figure at the end — and any section can be
+skipped and left for self-study.
+
+*Part 1 — modelling one animal*
 
 | # | Notebook | What you build | What you'll learn | Paper |
 |---|----------|----------------|-------------------|-------|
@@ -66,6 +71,15 @@ strategy; Notebook 7 extends it to a mouse whose strategy drifts.
 | 6 | Mixtures | the cycle on mice that blend strategies | parameter recovery and identifiability when regressors overlap | Fig 2F |
 | 7 | Dynamic model | the drifting-weight (random-walk) model | non-stationarity; priors as smoothing; the bias–variance trade-off | Fig 1D |
 | 8 | Engagement *(optional)* | strategy vs. task engagement | latent-state estimation; separating independent axes of variation | Fig 3B |
+
+*Part 2 — population-level inference*
+
+| # | Notebook | What you build | What you'll learn | Paper |
+|---|----------|----------------|-------------------|-------|
+| 6+ | *(bonus section in Notebook 6)* | a correlation & a linear fit | Pearson *r*, $R^2$, least-squares lines | Fig 2E |
+| 9 | Individual differences | variance partitioning; a permutation test | is an effect more than chance? testing without distributional assumptions | Fig 2H |
+| 10 | Multiple comparisons | t-tests; Bonferroni & Benjamini–Hochberg | keeping false positives in check across many tests | Fig 4 |
+| 11 | Hierarchical bootstrap | resampling for nested data | honest error bars when samples aren't independent | Fig 4 |
 """),
     md(r"""
 ## How the notebooks work
