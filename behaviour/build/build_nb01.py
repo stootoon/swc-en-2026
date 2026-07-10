@@ -124,6 +124,10 @@ interval**: a new bout begins whenever the gap since the previous lick exceeds
 return an `(n_bouts, 2)` array of `[start_time, end_time]`.
 *Hints:* `np.diff` gives the inter-lick intervals; `np.flatnonzero(gaps >
 threshold)` finds the indices just before each break.
+
+> **Check / unstuck.** The next cell should print `matches the reference
+> implementation: True`. Stuck? Use `sb.segment_bouts(sess.lick_times)` to keep
+> going and revisit later.
 """),
     code(
         solution=r"""
@@ -162,6 +166,10 @@ regress against the strategies.
 the image whose window contains it.
 *Hint:* image $i$ covers $[\,t_0 + i\cdot\Delta,\; t_0 + (i{+}1)\cdot\Delta\,)$
 where $\Delta$ = `sb.IMAGE_DURATION`.
+
+> **Check / unstuck.** Agreement should be **≈ 0.97** — *not* 1.0, because adjacent
+> bouts sometimes merge (that's the point of the sentence below). Stuck? Use
+> `sb.assign_bout_starts(sess.table, bouts)`.
 """),
     code(
         solution=r"""
@@ -235,6 +243,9 @@ columns:
 **Exercise 3 (the payoff).** Complete `build_design_matrix`. Use
 `sb.images_since_bout(bout_start)` for the waiting-time counter and
 `sb.timing_feature` for the sigmoid.
+
+> **Check / unstuck.** You should get `matches reference: True` and shape
+> `(4800, 5)`. Stuck? Use `sb.build_design_matrix(sess.table, bout_start=y)[0]`.
 """),
     code(
         solution=r"""

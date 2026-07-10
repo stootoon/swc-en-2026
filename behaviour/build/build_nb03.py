@@ -111,6 +111,9 @@ minimizes rather than maximizes. The extra `l2` term adds a small penalty on lar
 weights — a weak Gaussian **prior** that keeps the fit well-behaved and turns pure
 maximum-likelihood into the *maximum a posteriori* (MAP) estimate the paper uses;
 leave it as given.
+
+> **Check / unstuck.** The next cell should print **NLL at w=0 ≈ 3327**, matching
+> `n·log(0.5)`. Stuck? Use `sb.neg_log_likelihood`.
 """),
     code(
         solution=r"""
@@ -165,6 +168,9 @@ even estimates the gradient for us here — in Notebook 7 we'll supply one by ha
 
 **Exercise 2.** Complete `fit_static` using `scipy.optimize.minimize` with
 `method="L-BFGS-B"`, starting from an all-zeros weight vector.
+
+> **Check / unstuck.** The visual mouse should recover **bias ≈ −3, visual ≈ 5**,
+> the rest ≈ 0. Stuck? Use `sb.fit_static`.
 """),
     code(
         solution=r"""

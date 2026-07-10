@@ -52,6 +52,9 @@ $\alpha \in [0, 1]$: $\alpha = 1$ is pure visual, $\alpha = 0$ is pure timing,
 holding the total strategy strength fixed.
 
 **Exercise 1.** Complete `make_blend_mouse`.
+
+> **Check / unstuck.** Hit rate should rise from ~0.22 (α=0, pure timing) to ~0.88
+> (α=1, pure visual). Stuck? The solutions copy has it.
 """),
     code(
         solution=r"""
@@ -85,6 +88,9 @@ $\Delta_{\text{visual}} - \Delta_{\text{timing}}$. If the method works, the inde
 should rise monotonically with $\alpha$ — recovering the blend we dialed in.
 
 **Exercise 2.** Complete `strategy_index` using `sb.ablation_loglik_deltas`.
+
+> **Check / unstuck.** The recovered index should climb steadily with α in the next
+> plot. Stuck? The solutions copy has it.
 """),
     code(
         solution=r"""
@@ -190,6 +196,9 @@ accounts for. The line itself, $y \approx a x + b$, comes from least squares (th
 **Exercise 3.** Complete `correlate`: return the least-squares slope and intercept,
 Pearson's $r$, and $R^2$. *Hints:* `np.polyfit(x, y, 1)` gives `(slope, intercept)`;
 `np.corrcoef(x, y)[0, 1]` gives $r$.
+
+> **Check / unstuck.** Expect **r ≈ 0.93, R² ≈ 0.87**. Stuck? Use `sb.linear_fit(x, y)`
+> (returns a dict with `slope`, `intercept`, `r`, `r2`).
 """),
     code(
         solution=r"""

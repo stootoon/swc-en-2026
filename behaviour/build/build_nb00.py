@@ -90,7 +90,12 @@ skipped and left for self-study.
   reference implementations of every technique. Each notebook imports what it needs
   from it, so you can run any notebook on its own.
 - Wherever we can, an exercise ends by **checking your result against ground
-  truth** — the recover-the-truth spine again.
+  truth** — the recover-the-truth spine again, and each exercise tells you roughly
+  what number to expect so you can spot a bug.
+- **Stuck on an exercise?** Don't let it block your day. Every technique you
+  implement also lives in the backend as `sb.<name>` (and fully worked out in the
+  solutions copy), so you can drop that in, keep pace with the class, and circle
+  back later — the sections are built so the rest still runs.
 
 Run the cell below to confirm your environment is set up (select the
 **"SWC Behaviour (.venv)"** kernel if prompted). If it prints a mouse's weights

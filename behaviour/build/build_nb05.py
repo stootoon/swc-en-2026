@@ -114,6 +114,9 @@ $\Delta \approx 0$ as "it isn't using it."
 **Exercise 1.** Complete `ablation_deltas`: for each non-bias strategy, build the
 design matrix without that column and compute $\Delta$.
 *Hint:* `np.delete(X, k, axis=1)` removes column `k`.
+
+> **Check / unstuck.** For the visual mouse, expect **visual ≈ +0.24** and the other
+> three ≈ 0. Stuck? Use `sb.ablation_loglik_deltas(X, y, cols)`.
 """),
     code(
         solution=r"""
@@ -305,6 +308,9 @@ sits at $p^{*} = k/n$.
 **Exercise (optional).** Fill in the Laplace estimate: the curvature is
 $|g''(p^{*})| = k/p^{*2} + (n-k)/(1-p^{*})^2$, and the estimate is
 $e^{g(p^{*})}\sqrt{2\pi/|g''(p^{*})|}$.
+
+> **Check / unstuck.** The Laplace/exact **ratio should approach 1** as $n$ grows
+> (≈ 1.07, 1.01, 1.00). Fully optional — skip to §4.3 if short on time.
 """),
     code(
         solution=r"""

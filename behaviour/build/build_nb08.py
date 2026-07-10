@@ -72,6 +72,9 @@ paper, we compute **rolling rates** of licking and reward and call the mouse
 
 **Exercise 1.** Complete `classify_engaged`: smooth the bout-start vector into a
 rate and threshold it. Then we'll check the recovered state against the truth.
+
+> **Check / unstuck.** The recovered engagement should match the hidden truth on
+> **~90%+** of images. Stuck? The solutions copy has it.
 """),
     code(
         solution=r"""
@@ -121,6 +124,9 @@ act only on the overall drive to lick, not on the visual/timing balance.
 
 **Exercise 2.** Complete `strategy_index_on`: restrict $X, y$ to a boolean mask of
 images, then run the ablation from Notebook 5.
+
+> **Check / unstuck.** The two strategy indices (fully-engaged vs engaged-only)
+> should land close together (~+0.22). Stuck? The solutions copy has it.
 """),
     code(
         solution=r"""

@@ -83,6 +83,9 @@ while raising few false alarms.
 
 **Exercise 1.** Build the ROC curve yourself: for each threshold on a grid,
 predict `bout = score >= threshold` and compute the TPR and FPR.
+
+> **Check / unstuck.** Your curve should land right on top of the backend's in the
+> next plot. Stuck? Use `sb.roc_curve(scores, y)`.
 """),
     code(
         solution=r"""
@@ -181,6 +184,9 @@ Same answer — the formula is just the pair-counting done cleverly.
 the top) returns the ranks and, importantly, **averages ties**: many images share
 an identical design row here and so get an identical score, and averaging their
 ranks is what keeps the count correct.
+
+> **Check / unstuck.** Expect **AUC ≈ 0.88**, matching the backend. Stuck? Use
+> `sb.auc_score(scores, y)`.
 """),
     code(
         solution=r"""
@@ -213,6 +219,9 @@ blocks, not random images, so neighboring images don't leak between train and
 test.)
 
 **Exercise 3.** Fill in the fit-and-score step inside the cross-validation loop.
+
+> **Check / unstuck.** Cross-validated AUC ≈ **0.87**, just under the in-sample 0.88.
+> Stuck? Use `sb.cross_val_auc(X, y)`.
 """),
     code(
         solution=r"""

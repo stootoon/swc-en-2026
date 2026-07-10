@@ -81,6 +81,9 @@ width honestly reflects the mouse-level variability. A 95% confidence interval i
 just its 2.5th–97.5th percentiles.
 
 **Exercise 1.** Complete `hierarchical_bootstrap`.
+
+> **Check / unstuck.** The hierarchical 95% CI should be **wider** than the naive one
+> in the next plot. Stuck? Use `sb.hierarchical_bootstrap(by_mouse)`.
 """),
     code(
         solution=r"""

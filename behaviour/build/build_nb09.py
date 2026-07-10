@@ -97,6 +97,9 @@ It runs from 0 (all mice identical on average) to 1 (no within-mouse spread at a
 This quantity is $\eta^2$ — the same thing a one-way ANOVA reports.
 
 **Exercise 1.** Complete `variance_explained`.
+
+> **Check / unstuck.** Expect **≈ 0.79** (matches `sb.variance_explained`). Stuck?
+> Use `sb.variance_explained(strategy, mouse)`.
 """),
     code(
         solution=r"""
@@ -140,6 +143,9 @@ answers this without any distributional assumptions. The recipe:
 
 **Exercise 2.** Complete `permutation_test`. Use `sb.variance_explained` as the
 statistic (so this section works even if you skipped Exercise 1).
+
+> **Check / unstuck.** Expect **observed ≈ 0.79, shuffled ≈ 0.23, p ≈ 0.0005**.
+> Stuck? Use `sb.permutation_variance_explained(strategy, mouse)`.
 """),
     code(
         solution=r"""

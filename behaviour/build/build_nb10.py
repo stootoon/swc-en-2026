@@ -65,6 +65,9 @@ how often would we see a $t$ this extreme?* We read it from the t-distribution.
 **Exercise 1.** Complete `one_sample_t`. Compute $t$ yourself; get the two-sided
 p-value from `stats.t.sf` (the survival function, $1-\text{CDF}$) with `n-1` degrees
 of freedom.
+
+> **Check / unstuck.** The real candidate should give a small p (~0.006), the null
+> one a larger p. Stuck? `scipy.stats.ttest_1samp(x, 0)` returns `(t, p)`.
 """),
     code(
         solution=r"""
@@ -129,6 +132,9 @@ sliding threshold $\frac{k}{m}\alpha$ is lenient for the smallest p-values and
 tightens toward $\alpha$ — that's what trades a controlled FDR for more power.
 
 **Exercise 2.** Complete `benjamini_hochberg`; it returns a boolean "rejected" mask.
+
+> **Check / unstuck.** Expect **BH to reject ~9** candidates (matches the backend).
+> Stuck? Use `sb.benjamini_hochberg(pvals, 0.05)`.
 """),
     code(
         solution=r"""

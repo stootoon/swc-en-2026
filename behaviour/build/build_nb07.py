@@ -69,6 +69,9 @@ weights are allowed to differ at different times.
 
 **Exercise 1.** Complete `sliding_window_fit`: at each window center, fit the
 static model to just the images inside a window of half-width `half`.
+
+> **Check / unstuck.** The window weights should follow the true drift but look
+> jumpy. Stuck? The solutions copy has it (it just calls `sb.fit_static` per window).
 """),
     code(
         solution=r"""
@@ -146,6 +149,10 @@ penalty's gradient is the discrete second difference $w_{t-1} - 2w_t + w_{t+1}$.
 **Exercise 2.** Fill in the two random-walk pieces — the penalty **value** and its
 contribution to the **gradient**. Everything else (the data term and its
 gradient, carried over from Notebook 3) is provided.
+
+> **Check / unstuck.** No output here yet — `fit_dynamic` (next) uses it; if that
+> recovers the drift, this is right. Stuck? `sb.dynamic_neg_log_posterior` is the
+> same objective (it takes an extra `T, K`).
 """),
     code(
         solution=r"""
@@ -191,6 +198,9 @@ from the static fit (copied to every time point) so the optimizer starts from a
 sensible flat trajectory.
 
 **Exercise 3.** Complete `fit_dynamic`.
+
+> **Check / unstuck.** The recovered trajectory should track the true drift
+> (correlation ≈ 0.97) in the next plot. Stuck? Use `sb.fit_dynamic(X, y, sigma=0.05)`.
 """),
     code(
         solution=r"""
