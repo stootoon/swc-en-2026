@@ -120,10 +120,13 @@ The standard rule (paper: Figure S2) is a threshold on the **inter-lick
 interval**: a new bout begins whenever the gap since the previous lick exceeds
 **700 ms**.
 
-**Exercise 1.** Implement `segment_bouts`. Given a sorted array of lick times,
+**Exercise 1** *(~10 min · meaty)*. Implement `segment_bouts`. Given a sorted array of lick times,
 return an `(n_bouts, 2)` array of `[start_time, end_time]`.
-*Hints:* `np.diff` gives the inter-lick intervals; `np.flatnonzero(gaps >
-threshold)` finds the indices just before each break.
+
+*Worked example:* licks `[0.0, 0.1, 0.2, 5.0, 5.1]` with `threshold=0.7` have gaps
+`[0.1, 0.1, 4.8, 0.1]`; only the third exceeds 0.7, so there is **one break** (after
+index 2), giving two bouts: `0.0–0.2` and `5.0–5.1`. The code below already finds
+the break indices for you — you just turn them into `starts` and `ends`.
 
 > **Check / unstuck.** The next cell should print `matches the reference
 > implementation: True`. Stuck? Use `sb.segment_bouts(sess.lick_times)` to keep
@@ -143,9 +146,12 @@ def segment_bouts(lick_times, threshold=0.7):
 def segment_bouts(lick_times, threshold=0.7):
     lick_times = np.sort(np.asarray(lick_times))
     gaps = np.diff(lick_times)
-    # A new bout starts whenever the gap to the previous lick exceeds `threshold`.
-    # YOUR CODE HERE: build `starts` and `ends` (indices into lick_times) and
-    # return an (n_bouts, 2) array of [start_time, end_time].
+    breaks = np.flatnonzero(gaps > threshold)    # index of the last lick before each break
+    # Each bout runs from just after one break to the next break:
+    #   starts = [0, breaks[0]+1, breaks[1]+1, ...]   (first lick of each bout)
+    #   ends   = [breaks[0], breaks[1], ..., last lick]  (last lick of each bout)
+    # YOUR CODE HERE: build `starts` and `ends` (np.concatenate helps), then return
+    # np.column_stack((lick_times[starts], lick_times[ends])).
     raise NotImplementedError
 """,
     ),
@@ -162,7 +168,7 @@ The model predicts a **single binary outcome per image**: did a licking bout
 *start* during this image's 750 ms window? That vector, $y$, is what we'll later
 regress against the strategies.
 
-**Exercise 2.** Fill in `bout_starts_per_image`: map each bout's *start time* to
+**Exercise 2** *(~8 min)*. Fill in `bout_starts_per_image`: map each bout's *start time* to
 the image whose window contains it.
 *Hint:* image $i$ covers $[\,t_0 + i\cdot\Delta,\; t_0 + (i{+}1)\cdot\Delta\,)$
 where $\Delta$ = `sb.IMAGE_DURATION`.
@@ -240,7 +246,7 @@ columns:
 | `post_omission` | 1 on the image after an omission |
 | `timing` | the waiting-time sigmoid from §4 |
 
-**Exercise 3 (the payoff).** Complete `build_design_matrix`. Use
+**Exercise 3** *(~8 min · the payoff)*. Complete `build_design_matrix`. Use
 `sb.images_since_bout(bout_start)` for the waiting-time counter and
 `sb.timing_feature` for the sigmoid.
 

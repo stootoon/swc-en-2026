@@ -81,7 +81,7 @@ signal lies on the diagonal: it can only catch more bouts by raising false alarm
 at the same rate. A good model **bows toward the top-left**, catching most bouts
 while raising few false alarms.
 
-**Exercise 1.** Build the ROC curve yourself: for each threshold on a grid,
+**Exercise 1** *(~8 min)*. Build the ROC curve yourself: for each threshold on a grid,
 predict `bout = score >= threshold` and compute the TPR and FPR.
 
 > **Check / unstuck.** Your curve should land right on top of the backend's in the
@@ -180,7 +180,7 @@ print("rank-formula AUC:", (R_pos - n_pos * (n_pos + 1) / 2) / (n_pos * n_neg))
     md(r"""
 Same answer — the formula is just the pair-counting done cleverly.
 
-**Exercise 2.** Complete `auc_score` using that formula. `rankdata` (imported at
+**Exercise 2** *(~6 min)*. Complete `auc_score` using that formula. `rankdata` (imported at
 the top) returns the ranks and, importantly, **averages ties**: many images share
 an identical design row here and so get an identical score, and averaging their
 ranks is what keeps the count correct.
@@ -218,7 +218,7 @@ time blocks, fit on all but one, score the one left out, and repeat. (Contiguous
 blocks, not random images, so neighboring images don't leak between train and
 test.)
 
-**Exercise 3.** Fill in the fit-and-score step inside the cross-validation loop.
+**Exercise 3** *(~5 min)*. Fill in the fit-and-score step inside the cross-validation loop.
 
 > **Check / unstuck.** Cross-validated AUC ≈ **0.87**, just under the in-sample 0.88.
 > Stuck? Use `sb.cross_val_auc(X, y)`.

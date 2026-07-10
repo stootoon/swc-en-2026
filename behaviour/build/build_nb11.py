@@ -80,7 +80,7 @@ Repeating this thousands of times gives a distribution for the grand mean whose
 width honestly reflects the mouse-level variability. A 95% confidence interval is
 just its 2.5th–97.5th percentiles.
 
-**Exercise 1.** Complete `hierarchical_bootstrap`.
+**Exercise 1** *(~8 min · meaty)*. Complete `hierarchical_bootstrap`.
 
 > **Check / unstuck.** The hierarchical 95% CI should be **wider** than the naive one
 > in the next plot. Stuck? Use `sb.hierarchical_bootstrap(by_mouse)`.
@@ -143,7 +143,7 @@ because we can make data with a **known** grand mean and repeat the experiment m
 times. To isolate the statistics we skip the model-fitting and draw the nested
 numbers directly: each mouse gets an effect around the true mean, each session
 scatters around its mouse. Then we count how often each 95% CI actually covers the
-truth.
+truth. *(The 400 experiments take ~10 s.)*
 """),
     code(r"""
 TRUE_MEAN, BETWEEN_SD, WITHIN_SD = 0.5, 1.0, 1.0

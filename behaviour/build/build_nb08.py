@@ -70,7 +70,7 @@ We don't get the true engagement state for real mice — we infer it. Following 
 paper, we compute **rolling rates** of licking and reward and call the mouse
 *disengaged* wherever the lick-bout rate falls below a threshold.
 
-**Exercise 1.** Complete `classify_engaged`: smooth the bout-start vector into a
+**Exercise 1** *(~5 min)*. Complete `classify_engaged`: smooth the bout-start vector into a
 rate and threshold it. Then we'll check the recovered state against the truth.
 
 > **Check / unstuck.** The recovered engagement should match the hidden truth on
@@ -122,7 +122,7 @@ engaged images of this disengaging mouse and compare it to the *same* mouse run
 fully engaged — the strategy should be unchanged, because we built engagement to
 act only on the overall drive to lick, not on the visual/timing balance.
 
-**Exercise 2.** Complete `strategy_index_on`: restrict $X, y$ to a boolean mask of
+**Exercise 2** *(~4 min)*. Complete `strategy_index_on`: restrict $X, y$ to a boolean mask of
 images, then run the ablation from Notebook 5.
 
 > **Check / unstuck.** The two strategy indices (fully-engaged vs engaged-only)

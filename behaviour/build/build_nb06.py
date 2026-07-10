@@ -51,7 +51,7 @@ strategy, `simulate` to produce behavior. We parameterize the blend by
 $\alpha \in [0, 1]$: $\alpha = 1$ is pure visual, $\alpha = 0$ is pure timing,
 holding the total strategy strength fixed.
 
-**Exercise 1.** Complete `make_blend_mouse`.
+**Exercise 1** *(~5 min)*. Complete `make_blend_mouse`.
 
 > **Check / unstuck.** Hit rate should rise from ~0.22 (α=0, pure timing) to ~0.88
 > (α=1, pure visual). Stuck? The solutions copy has it.
@@ -87,7 +87,7 @@ Run the ablation cycle on each mouse and compute the strategy index
 $\Delta_{\text{visual}} - \Delta_{\text{timing}}$. If the method works, the index
 should rise monotonically with $\alpha$ — recovering the blend we dialed in.
 
-**Exercise 2.** Complete `strategy_index` using `sb.ablation_loglik_deltas`.
+**Exercise 2** *(~3 min · easy)*. Complete `strategy_index` using `sb.ablation_loglik_deltas`.
 
 > **Check / unstuck.** The recovered index should climb steadily with α in the next
 > plot. Stuck? The solutions copy has it.
@@ -168,7 +168,8 @@ not "what is *this* mouse's strategy?" but "across the population, do two measur
 quantities **move together**?" The tool for that is a **correlation** summarized by
 a straight-line (**linear**) fit. As a concrete case, let's ask whether a mouse's
 *recovered visual weight* predicts its *hit rate*, across mice with differing
-visual strength. First, build the population and measure the two quantities:
+visual strength. First, build the population and measure the two quantities
+*(~5 s to fit)*:
 """),
     code(r"""
 rng = np.random.default_rng(0)
@@ -193,7 +194,7 @@ the fraction of the variance in one quantity that the line through the other
 accounts for. The line itself, $y \approx a x + b$, comes from least squares (the
 `np.polyfit(x, y, 1)` you may know).
 
-**Exercise 3.** Complete `correlate`: return the least-squares slope and intercept,
+**Exercise 3** *(~6 min)*. Complete `correlate`: return the least-squares slope and intercept,
 Pearson's $r$, and $R^2$. *Hints:* `np.polyfit(x, y, 1)` gives `(slope, intercept)`;
 `np.corrcoef(x, y)[0, 1]` gives $r$.
 

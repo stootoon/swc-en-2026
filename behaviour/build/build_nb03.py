@@ -105,7 +105,7 @@ This version is also numerically safer: it never forms $p_t$ and then logs it
 (which blows up for confident predictions). The awkward $\log(1 + e^z)$ term has
 its own stable routine, `np.logaddexp(0, z)`.
 
-**Exercise 1.** Implement this log-likelihood inside `neg_log_likelihood`. We
+**Exercise 1** *(~8 min · meaty)*. Implement this log-likelihood inside `neg_log_likelihood`. We
 return the *negative* log-likelihood because the optimizer in the next step
 minimizes rather than maximizes. The extra `l2` term adds a small penalty on large
 weights — a weak Gaussian **prior** that keeps the fit well-behaved and turns pure
@@ -166,7 +166,7 @@ the optimizer we'll call, **L-BFGS-B**, does; treat it as a black box whose one-
 summary is "gradient descent that also exploits curvature." `scipy.optimize.minimize`
 even estimates the gradient for us here — in Notebook 7 we'll supply one by hand.
 
-**Exercise 2.** Complete `fit_static` using `scipy.optimize.minimize` with
+**Exercise 2** *(~4 min · easy)*. Complete `fit_static` using `scipy.optimize.minimize` with
 `method="L-BFGS-B"`, starting from an all-zeros weight vector.
 
 > **Check / unstuck.** The visual mouse should recover **bias ≈ −3, visual ≈ 5**,

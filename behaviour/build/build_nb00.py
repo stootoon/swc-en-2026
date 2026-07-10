@@ -117,6 +117,33 @@ sb.plotting.plot_session_raster(sess, t0=560, t1=585)
 plt.show()
 """),
     md(r"""
+## Glossary — terms you'll meet
+
+You don't need these yet; come back when a word trips you up. Each is defined
+properly where it first appears (in parentheses).
+
+| term | in plain words |
+|---|---|
+| **design matrix / regressor** | a table with one row per image and one column per candidate strategy; each column is a *regressor* (NB1) |
+| **bout** | a burst of licks treated as one action (NB1) |
+| **Bernoulli / likelihood** | a single yes/no trial; the *likelihood* is the probability the model assigns to all the data (NB3) |
+| **log-likelihood / nats** | the log of the likelihood; "nats" is just its unit when you use natural log (NB3, NB5) |
+| **logit / log-odds / sigmoid** | weights act on the log-odds of licking; the sigmoid maps them back to a probability (NB3) |
+| **MAP / prior** | a fit that gently prefers small weights (a *prior*), rather than pure maximum-likelihood (NB3) |
+| **gradient descent** | walk downhill on the error surface to fit the weights (NB3) |
+| **ROC / AUC** | a curve of hit-rate vs false-alarm-rate; AUC is its area — the chance the model ranks a lick above a non-lick (NB4) |
+| **cross-validation / held-out** | score the model on data it wasn't fit to, to avoid fooling yourself (NB4) |
+| **ablation / nested model** | remove one strategy and see how much prediction suffers; the smaller model is *nested* in the full one (NB5) |
+| **model evidence / Laplace approximation** | probability of the data with the weights averaged out; approximated by a Gaussian at the peak (NB5, optional) |
+| **strategy index** | one number summarizing visual-vs-timing reliance (NB5) |
+| **correlation / R²** | how tightly two quantities move together; R² is the fraction of variance explained (NB6) |
+| **permutation test / null** | shuffle labels to build the "no real effect" distribution, then see if your result beats it (NB9) |
+| **variance explained (η²)** | the fraction of spread due to group identity, e.g. mouse (NB9) |
+| **t-test / p-value** | signal-over-noise for a mean; the p-value is how surprising it'd be under no effect (NB10) |
+| **FWER / FDR / Bonferroni / BH** | ways to control false positives across many tests; BH controls the *false-discovery rate* (NB10) |
+| **bootstrap / hierarchical bootstrap** | resample the data to get error bars; the *hierarchical* version resamples each level (mice, then sessions) for nested data (NB11) |
+"""),
+    md(r"""
 ## Ready
 
 That's the whole arc: from raw licks to a design matrix, to a fitted model, to

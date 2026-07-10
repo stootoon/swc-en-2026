@@ -67,7 +67,7 @@ If the strategy changes slowly, maybe we can fit the *static* model **locally** 
 in a short window around each time point — and let the window slide. Then the
 weights are allowed to differ at different times.
 
-**Exercise 1.** Complete `sliding_window_fit`: at each window center, fit the
+**Exercise 1** *(~6 min)*. Complete `sliding_window_fit`: at each window center, fit the
 static model to just the images inside a window of half-width `half`.
 
 > **Check / unstuck.** The window weights should follow the true drift but look
@@ -143,10 +143,13 @@ $$\underbrace{-\sum_t \big[y_t z_t - \log(1+e^{z_t})\big]}_{\text{data: each ima
 
 The data term is the same Bernoulli likelihood as Notebook 3 — only now each
 image has its *own* weights. We supply the gradient too, so the optimizer is
-fast. The data-term gradient is the familiar logistic $(p_t - y_t)\,x_t$; the
-penalty's gradient is the discrete second difference $w_{t-1} - 2w_t + w_{t+1}$.
+fast. The data-term gradient is the familiar logistic $(p_t - y_t)\,x_t$. For the penalty, each $w_t$ appears in **two** squared steps —
+the step *into* it $(w_t - w_{t-1})$ and the step *out of* it $(w_{t+1} - w_t)$ — so
+its gradient collects one contribution from each: the discrete second difference
+$w_{t-1} - 2w_t + w_{t+1}$. In code that is exactly `gp[:-1] -= D; gp[1:] += D`
+(subtract each step `D` from its left endpoint, add it to its right).
 
-**Exercise 2.** Fill in the two random-walk pieces — the penalty **value** and its
+**Exercise 2** *(~10 min · meaty)*. Fill in the two random-walk pieces — the penalty **value** and its
 contribution to the **gradient**. Everything else (the data term and its
 gradient, carried over from Notebook 3) is provided.
 
@@ -197,7 +200,7 @@ pass `jac=True` because our function returns the gradient, and we **warm-start**
 from the static fit (copied to every time point) so the optimizer starts from a
 sensible flat trajectory.
 
-**Exercise 3.** Complete `fit_dynamic`.
+**Exercise 3** *(~4 min · easy)*. Complete `fit_dynamic`.
 
 > **Check / unstuck.** The recovered trajectory should track the true drift
 > (correlation ≈ 0.97) in the next plot. Stuck? Use `sb.fit_dynamic(X, y, sigma=0.05)`.
@@ -274,6 +277,8 @@ recovery error against the true trajectory as $\sigma$ varies — a bias–varia
 U-curve with its minimum near the $\sigma$ that generated the data. (On real data
 you'd instead choose $\sigma$ by cross-validation or model evidence, as the paper
 does in Figure 2C.)
+
+*(This sweep refits the model for several $\sigma$ values — it takes ~10 s.)*
 """),
     code(r"""
 sigmas = np.array([0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.4])

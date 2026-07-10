@@ -67,7 +67,7 @@ Before any modeling, how does each strategy *look*? The two simplest summaries:
 * **hit rate** — fraction of image changes the mouse licked to.
 * **false-alarm rate** — fraction of non-change images it licked on anyway.
 
-**Exercise 1.** Complete `strategy_signature`.
+**Exercise 1** *(~4 min · easy)*. Complete `strategy_signature`.
 
 > **Check / unstuck.** Expect the visual mouse near **0.88 hits / 0.05 false
 > alarms**, the timing mouse near **0.21 / 0.20**. Stuck? The solutions copy has it.
@@ -121,7 +121,7 @@ with the time waited since the last bout.** We can measure that directly from th
 data — no ground truth needed — by binning images on *images since last bout*
 and asking how often a bout starts in each bin.
 
-**Exercise 2.** Complete `lick_prob_by_wait`.
+**Exercise 2** *(~7 min)*. Complete `lick_prob_by_wait`.
 *Hint:* `sb.images_since_bout(bout_start)` gives the waiting count for every image.
 
 > **Check / unstuck.** The timing mouse's curve should climb with waiting time while

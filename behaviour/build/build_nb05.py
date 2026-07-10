@@ -111,7 +111,7 @@ $$\Delta_{\text{strategy}} = \text{LL}_{\text{full}} - \text{LL}_{\text{without 
 reading a large positive $\Delta$ as "the mouse relies on this strategy" and
 $\Delta \approx 0$ as "it isn't using it."
 
-**Exercise 1.** Complete `ablation_deltas`: for each non-bias strategy, build the
+**Exercise 1** *(~6 min)*. Complete `ablation_deltas`: for each non-bias strategy, build the
 design matrix without that column and compute $\Delta$.
 *Hint:* `np.delete(X, k, axis=1)` removes column `k`.
 
@@ -164,10 +164,15 @@ built in — the clean result that makes this the right place to trust the metho
 
 One mouse gives one clean answer; the paper's Figure 2D shows the whole
 **distribution** across the dataset. Let's reproduce its shape over a population
-spanning the strategy spectrum (a coarser 3-fold CV keeps it quick). To match the
+spanning the strategy spectrum (a coarser 3-fold CV keeps it quick, but the fits
+still take **~10 s** — that's normal). To match the
 paper we plot the **change** in the model's held-out score when a strategy is removed
-— this is just the *negative* of the "drop" above, so it is **negative when removal
-hurts**. Each dot is a mouse; the black bar is the population mean.
+(each dot a mouse, the black bar the population mean).
+
+> ⚠️ **Sign flip.** These are the *same numbers as the bar chart above, negated.* The
+> bar showed the **drop** (positive = important); here we show the **change when
+> removed** (negative = important), to match the paper. A big drop up there is a big
+> dip down here.
 """),
     code(r"""
 population = [sb.make_mouse(name, seed=s)
@@ -305,7 +310,7 @@ $$\int_0^1 p^{\,k}(1-p)^{\,n-k}\,dp \;=\; \frac{k!\,(n-k)!}{(n+1)!}$$
 *same* integral with Laplace, taking $g(p) = k\log p + (n-k)\log(1-p)$, whose peak
 sits at $p^{*} = k/n$.
 
-**Exercise (optional).** Fill in the Laplace estimate: the curvature is
+**Exercise (optional)** *(~5 min)*. Fill in the Laplace estimate: the curvature is
 $|g''(p^{*})| = k/p^{*2} + (n-k)/(1-p^{*})^2$, and the estimate is
 $e^{g(p^{*})}\sqrt{2\pi/|g''(p^{*})|}$.
 

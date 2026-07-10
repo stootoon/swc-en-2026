@@ -39,7 +39,7 @@ We generate a **cohort**: several sessions from each of many mice, where every
 mouse has its own *stable* strategy plus session-to-session wobble. For each session
 we fit the static model (Notebook 3) and summarize its strategy by a single fast
 number, the recovered **visual − timing** weight. This cell always runs; the
-sections after it are independent.
+sections after it are independent. *(Fitting the cohort takes ~5 s.)*
 """),
     code(r"""
 import numpy as np
@@ -96,7 +96,7 @@ $$\text{variance explained by mouse} \;=\;
 It runs from 0 (all mice identical on average) to 1 (no within-mouse spread at all).
 This quantity is $\eta^2$ — the same thing a one-way ANOVA reports.
 
-**Exercise 1.** Complete `variance_explained`.
+**Exercise 1** *(~6 min)*. Complete `variance_explained`.
 
 > **Check / unstuck.** Expect **≈ 0.79** (matches `sb.variance_explained`). Stuck?
 > Use `sb.variance_explained(strategy, mouse)`.
@@ -141,7 +141,7 @@ answers this without any distributional assumptions. The recipe:
    distribution: *what the statistic looks like when the structure is fake*.
 3. The p-value is the fraction of shuffles that match or beat the real value.
 
-**Exercise 2.** Complete `permutation_test`. Use `sb.variance_explained` as the
+**Exercise 2** *(~6 min)*. Complete `permutation_test`. Use `sb.variance_explained` as the
 statistic (so this section works even if you skipped Exercise 1).
 
 > **Check / unstuck.** Expect **observed ≈ 0.79, shuffled ≈ 0.23, p ≈ 0.0005**.

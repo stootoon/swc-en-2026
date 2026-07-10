@@ -62,7 +62,7 @@ mice. A large $|t|$ means the mean is many standard errors from 0 — hard to ex
 as noise. The **p-value** turns $|t|$ into a probability: *if the true mean were 0,
 how often would we see a $t$ this extreme?* We read it from the t-distribution.
 
-**Exercise 1.** Complete `one_sample_t`. Compute $t$ yourself; get the two-sided
+**Exercise 1** *(~5 min)*. Complete `one_sample_t`. Compute $t$ yourself; get the two-sided
 p-value from `stats.t.sf` (the survival function, $1-\text{CDF}$) with `n-1` degrees
 of freedom.
 
@@ -131,7 +131,13 @@ rank $k$ with $p_{(k)} \le \frac{k}{m}\alpha$, and reject everything up to it. T
 sliding threshold $\frac{k}{m}\alpha$ is lenient for the smallest p-values and
 tightens toward $\alpha$ — that's what trades a controlled FDR for more power.
 
-**Exercise 2.** Complete `benjamini_hochberg`; it returns a boolean "rejected" mask.
+*Worked example:* with $m=5$ p-values $[0.001, 0.20, 0.01, 0.50, 0.04]$, sort to
+$[0.001, 0.01, 0.04, 0.20, 0.50]$ and compare each to $\frac{k}{5}\cdot 0.05 =
+[0.01, 0.02, 0.03, 0.04, 0.05]$: ranks 1 and 2 pass ($0.001\le 0.01$, $0.01\le 0.02$),
+rank 3 fails ($0.04 > 0.03$). The **largest** rank that passes is $k=2$, so you
+reject the two smallest p-values.
+
+**Exercise 2** *(~8 min · meaty)*. Complete `benjamini_hochberg`; it returns a boolean "rejected" mask.
 
 > **Check / unstuck.** Expect **BH to reject ~9** candidates (matches the backend).
 > Stuck? Use `sb.benjamini_hochberg(pvals, 0.05)`.
