@@ -56,16 +56,16 @@ two where you implement the key idea, and a figure from the paper reproduced at 
 end. Notebooks 3–6 build a **fit → evaluate → ablate** cycle on mice with a fixed
 strategy; Notebook 7 extends it to a mouse whose strategy drifts.
 
-| # | Notebook | What you build | Paper |
-|---|----------|----------------|-------|
-| 1 | Task → design matrix | licking bouts and the five-strategy design matrix | Fig 1A, 1C |
-| 2 | Meet the mice | how each strategy looks in behavior | Fig 1B |
-| 3 | Static model | logistic regression from its likelihood; weight recovery | Fig 1D |
-| 4 | Evaluation | ROC, AUC, cross-validation | Fig 2A |
-| 5 | Evidence & ablation | which strategies matter; the strategy index | Fig 2B, 2D |
-| 6 | Mixtures | the cycle on mice that blend strategies | Fig 2F |
-| 7 | Dynamic model | the drifting-weight (random-walk) model | Fig 1D |
-| 8 | Engagement *(optional)* | strategy vs. task engagement | Fig 3B |
+| # | Notebook | What you build | What you'll learn | Paper |
+|---|----------|----------------|-------------------|-------|
+| 1 | Task → design matrix | licking bouts and the five-strategy design matrix | turning raw events into regressors — building a design matrix | Fig 1A, 1C |
+| 2 | Meet the mice | how each strategy looks in behavior | generative models; reading a parameter off behavior | Fig 1B |
+| 3 | Static model | logistic regression from its likelihood; weight recovery | the Bernoulli likelihood, maximum-likelihood/MAP fitting, gradient descent | Fig 1D |
+| 4 | Evaluation | ROC, AUC, cross-validation | scoring predictions; ROC & AUC; cross-validation and overfitting | Fig 2A |
+| 5 | Evidence & ablation | which strategies matter; the strategy index | model comparison; nested models & held-out likelihood; *(opt.)* Bayesian evidence & the Laplace approximation | Fig 2B, 2D |
+| 6 | Mixtures | the cycle on mice that blend strategies | parameter recovery and identifiability when regressors overlap | Fig 2F |
+| 7 | Dynamic model | the drifting-weight (random-walk) model | non-stationarity; priors as smoothing; the bias–variance trade-off | Fig 1D |
+| 8 | Engagement *(optional)* | strategy vs. task engagement | latent-state estimation; separating independent axes of variation | Fig 3B |
 """),
     md(r"""
 ## How the notebooks work
