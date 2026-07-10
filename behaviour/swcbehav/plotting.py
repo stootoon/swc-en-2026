@@ -9,8 +9,23 @@ from __future__ import annotations
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.colors import LinearSegmentedColormap
 
 from .task import IMAGE_DURATION
+from .generate import WEIGHT_COLORS
+
+
+def _draw_design_rows(ax, X, col_names, i0, i1, x_left, x_right):
+    """Draw each design-matrix row in its paper strategy color (white -> color)."""
+    for i, name in enumerate(col_names):
+        cmap = LinearSegmentedColormap.from_list("", ["white", WEIGHT_COLORS.get(name, "black")])
+        ax.imshow(X[i0:i1, i][None, :], aspect="auto", cmap=cmap, vmin=0, vmax=1,
+                  interpolation="nearest", extent=[x_left, x_right, i + 0.5, i - 0.5])
+    ax.set_ylim(len(col_names) - 0.5, -0.5)
+    ax.set_yticks(range(len(col_names)))
+    ax.set_yticklabels(col_names)
+    for tick, name in zip(ax.get_yticklabels(), col_names):
+        tick.set_color(WEIGHT_COLORS.get(name, "black"))
 
 
 def plot_session_raster(sess, t0=560.0, t1=580.0, ax=None):
@@ -53,13 +68,9 @@ def plot_design_matrix(X, col_names, table, start=0, n=40, ax=None):
     """Show the design-matrix columns over a slice of images (Fig 1C flavor)."""
     if ax is None:
         _, ax = plt.subplots(figsize=(11, 3.0))
-    sl = slice(start, start + n)
-    im = ax.imshow(X[sl].T, aspect="auto", cmap="magma", vmin=0, vmax=1,
-                   interpolation="nearest")
-    ax.set_yticks(range(len(col_names)))
-    ax.set_yticklabels(col_names)
+    _draw_design_rows(ax, X, col_names, start, start + n, -0.5, n - 0.5)
+    ax.set_xlim(-0.5, n - 0.5)
     ax.set_xlabel("image (relative)")
-    plt.colorbar(im, ax=ax, fraction=0.025, pad=0.01, label="regressor value")
     return ax
 
 
@@ -98,15 +109,11 @@ def plot_regressors_and_licks(sess, X, col_names, start=0, n=40):
     ax_r.set_yticks([])
     ax_r.set_ylabel("licks")
 
-    # --- bottom: design matrix, columns aligned to the same image indices ---
-    im = ax_m.imshow(X[i0:i1].T, aspect="auto", cmap="magma", vmin=0, vmax=1,
-                     interpolation="nearest",
-                     extent=[i0, i1, len(col_names) - 0.5, -0.5])
-    ax_m.set_yticks(range(len(col_names)))
-    ax_m.set_yticklabels(col_names)
+    # --- bottom: design matrix, one row per strategy in its paper color ---
+    _draw_design_rows(ax_m, X, col_names, i0, i1, i0, i1)
     ax_m.set_xlabel("image")
     ax_r.set_xlim(i0, i1)
-    fig.colorbar(im, ax=[ax_r, ax_m], fraction=0.03, pad=0.02, label="regressor value")
+    ax_m.set_xlim(i0, i1)
     return ax_r, ax_m
 
 
@@ -117,13 +124,13 @@ def plot_weights(true_weights=None, fit_weights=None, col_names=None, time=None,
         _, ax = plt.subplots(figsize=(11, 3.2))
     n = (true_weights if true_weights is not None else fit_weights).shape[0]
     x = time if time is not None else np.arange(n)
-    colors = plt.cm.tab10(np.arange(len(col_names)))
     for k, name in enumerate(col_names):
+        color = WEIGHT_COLORS.get(name, "black")
         if true_weights is not None:
-            ax.plot(x, true_weights[:, k], color=colors[k], lw=2, alpha=0.5,
+            ax.plot(x, true_weights[:, k], color=color, lw=2, alpha=0.5,
                     label=f"{name} (true)")
         if fit_weights is not None:
-            ax.plot(x, fit_weights[:, k], color=colors[k], lw=1.2, ls="--",
+            ax.plot(x, fit_weights[:, k], color=color, lw=1.2, ls="--",
                     label=f"{name} (fit)")
     ax.axhline(0, color="0.6", lw=0.8)
     ax.set_xlabel("image")

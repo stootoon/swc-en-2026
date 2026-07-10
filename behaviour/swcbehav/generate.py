@@ -32,6 +32,16 @@ from . import task as task_module
 
 WEIGHT_NAMES = ["bias", "visual", "omission", "post_omission", "timing"]
 
+# Per-strategy colors matching Piet et al. (Fig 1C/1D/2 legends): gray bias,
+# orange visual, green omission, magenta post-omission, blue timing.
+WEIGHT_COLORS = {
+    "bias": "gray",
+    "visual": "orange",
+    "omission": "green",
+    "post_omission": "magenta",
+    "timing": "blue",
+}
+
 # Timing-strategy sigmoid: licking is suppressed right after a bout, crosses 0.5
 # at ``TIMING_MIDPOINT`` images, and saturates high after that.
 TIMING_MIDPOINT = 4.0

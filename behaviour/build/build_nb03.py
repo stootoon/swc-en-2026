@@ -242,7 +242,7 @@ w_static = fit_static(Xd, yd)
 
 sb.plotting.plot_weights(true_weights=dyn.true_weights, col_names=sb.WEIGHT_NAMES)
 for k, name in enumerate(sb.WEIGHT_NAMES):
-    plt.axhline(w_static[k], color=plt.cm.tab10(k), ls=":", lw=1.5)
+    plt.axhline(w_static[k], color=sb.WEIGHT_COLORS[name], ls=":", lw=1.5)
 plt.title("dynamic mouse: drifting truth (solid) vs one static fit (dotted)")
 plt.show()
 print("static fit visual =", round(w_static[1], 2),

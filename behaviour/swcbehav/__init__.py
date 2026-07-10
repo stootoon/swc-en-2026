@@ -18,6 +18,7 @@ from .generate import (
     CohortSession,
     make_cohort,
     WEIGHT_NAMES,
+    WEIGHT_COLORS,
     TIMING_MIDPOINT,
     TIMING_SLOPE,
 )

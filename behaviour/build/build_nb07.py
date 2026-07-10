@@ -55,8 +55,8 @@ moving.
     code(r"""
 w_static = sb.fit_static(X, y)
 sb.plotting.plot_weights(true_weights=dyn.true_weights, col_names=cols)
-for k in range(K):
-    plt.axhline(w_static[k], color=plt.cm.tab10(k), ls=":", lw=1.5)
+for k, name in enumerate(cols):
+    plt.axhline(w_static[k], color=sb.WEIGHT_COLORS[name], ls=":", lw=1.5)
 plt.title("static fit (dotted) can't track the drifting truth (solid)")
 plt.show()
 """),
@@ -98,8 +98,9 @@ W_win = sliding_window_fit(X, y, centers)
     code(r"""
 plt.figure(figsize=(11, 3.2))
 for k, name in [(1, "visual"), (4, "timing")]:
-    line, = plt.plot(centers, W_win[:, k], "o-", ms=3, label=f"{name} (windows)")
-    plt.plot(dyn.true_weights[:, k], color=line.get_color(), alpha=0.4, lw=3)
+    c = sb.WEIGHT_COLORS[name]
+    plt.plot(centers, W_win[:, k], "o-", ms=3, color=c, label=f"{name} (windows)")
+    plt.plot(dyn.true_weights[:, k], color=c, alpha=0.4, lw=3)
 plt.axhline(0, color="0.7", lw=0.8); plt.xlabel("image"); plt.ylabel("weight")
 plt.title("sliding windows follow the drift -- but jump around"); plt.legend()
 plt.show()
@@ -278,7 +279,7 @@ ax[0].set_xlabel(r"$\sigma$ (smoothing)"); ax[0].set_ylabel("recovery RMSE")
 ax[0].set_title("bias-variance: too stiff <-> too wiggly")
 for s, ls in [(0.005, ":"), (0.05, "-"), (0.4, "--")]:
     W = fit_dynamic(X, y, sigma=s)
-    ax[1].plot(W[:, 1], ls, color="tab:green", label=f"visual, sigma={s}")
+    ax[1].plot(W[:, 1], ls, color=sb.WEIGHT_COLORS["visual"], label=f"visual, sigma={s}")
 ax[1].plot(truth[:, 0], color="k", alpha=0.4, lw=3, label="true visual")
 ax[1].set_xlabel("image"); ax[1].set_ylabel("weight")
 ax[1].set_title("under- vs over-smoothing"); ax[1].legend(fontsize=7)

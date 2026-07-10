@@ -144,7 +144,7 @@ def ablation_deltas(X, y, cols, n_folds=5):
 deltas = ablation_deltas(X, y, cols)
 names = list(deltas)
 plt.figure(figsize=(5, 3.2))
-plt.bar(names, [deltas[n] for n in names], color="tab:red")
+plt.bar(names, [deltas[n] for n in names], color=[sb.WEIGHT_COLORS[n] for n in names])
 plt.ylabel("drop in held-out LL"); plt.title("visual mouse: strategy contributions")
 plt.xticks(rotation=45, ha="right"); plt.axhline(0, color="k", lw=0.8)
 plt.tight_layout(); plt.show()
@@ -160,10 +160,11 @@ built in — the clean result that makes this the right place to trust the metho
 ### Across the population (Figure 2D)
 
 One mouse gives one clean answer; the paper's Figure 2D shows the whole
-**distribution** — every session's ablation drop, for each strategy, across the
-dataset. Let's reproduce that shape over a population spanning the strategy spectrum
-(a coarser 3-fold CV keeps it quick). Each dot is a mouse; the black bar is the
-population mean.
+**distribution** across the dataset. Let's reproduce its shape over a population
+spanning the strategy spectrum (a coarser 3-fold CV keeps it quick). To match the
+paper we plot the **change** in the model's held-out score when a strategy is removed
+— this is just the *negative* of the "drop" above, so it is **negative when removal
+hurts**. Each dot is a mouse; the black bar is the population mean.
 """),
     code(r"""
 population = [sb.make_mouse(name, seed=s)
@@ -179,20 +180,22 @@ for sess in population:
 plt.figure(figsize=(5.6, 4))
 jit = np.random.default_rng(0)
 for i, s in enumerate(order):
-    vals = np.array(dist[s])
-    plt.scatter(i + jit.uniform(-0.15, 0.15, len(vals)), vals, s=25, alpha=0.6)
-    plt.hlines(vals.mean(), i - 0.25, i + 0.25, color="k", lw=2)
+    change = -np.array(dist[s])        # change when removed = -(drop): negative if the strategy helps
+    plt.scatter(i + jit.uniform(-0.15, 0.15, len(change)), change, s=25, alpha=0.6,
+                color=sb.WEIGHT_COLORS[s])
+    plt.hlines(change.mean(), i - 0.25, i + 0.25, color="k", lw=2)
 plt.axhline(0, color="0.7", lw=0.8)
 plt.xticks(range(len(order)), order, rotation=45, ha="right")
-plt.ylabel("drop in held-out LL when removed")
+plt.ylabel("change in held-out LL when removed")
 plt.title("strategy contributions across the population (cf. Fig 2D)")
 plt.tight_layout(); plt.show()
 """),
     md(r"""
-Visual and timing carry large drops with a wide spread — large because mice rely on
-them, spread because *which* of the two dominates depends on the individual mouse (a
-timing mouse's visual drop is near zero, and vice versa). Omission and post-omission
-sit near zero throughout. That's the population-level version of Figure 2D.
+Visual and timing plunge well below zero, with a wide spread — deep because mice rely
+on them, spread because *which* of the two dominates depends on the individual mouse
+(a timing mouse's visual change is near zero, and vice versa). Omission and
+post-omission stay at zero. Removing a strategy the mouse actually uses makes the
+model worse — exactly the negative excursions of Figure 2D.
 
 ## 3. The strategy index
 
@@ -222,7 +225,7 @@ def strategy_index(sess, n_folds=5):
     ),
     code(r"""
 plt.figure(figsize=(5.2, 4.4))
-colors = {"visual": "tab:green", "timing": "tab:blue", "mixed": "tab:purple"}
+colors = {"visual": sb.WEIGHT_COLORS["visual"], "timing": sb.WEIGHT_COLORS["timing"], "mixed": "purple"}
 for name in ["visual", "timing", "mixed"]:
     for seed in range(4):
         vi, ti, si = strategy_index(sb.make_mouse(name, seed=seed))

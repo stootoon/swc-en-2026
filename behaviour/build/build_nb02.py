@@ -144,7 +144,7 @@ def lick_prob_by_wait(sess, max_wait=10):
 plt.figure(figsize=(6, 3.5))
 for name in ["visual", "timing"]:
     waits, probs = lick_prob_by_wait(sb.make_mouse(name, seed=0))
-    plt.plot(waits, probs, "o-", label=name)
+    plt.plot(waits, probs, "o-", color=sb.WEIGHT_COLORS[name], label=name)
 plt.xlabel("images since last bout"); plt.ylabel("P(bout starts)")
 plt.title("the timing strategy, read from behavior"); plt.legend()
 plt.show()
