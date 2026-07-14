@@ -1,2 +1,7 @@
 .venv/*
 *DS_Store*
+
+# Generated preview site (built locally for review, and in CI for GitHub Pages).
+# Never commit it -- students clone this repo, so keep it lean.
+_site/
+*/preview/

@@ -4,5 +4,5 @@ __pycache__/
 *.pyc
 .ipynb_checkpoints/
 .DS_Store
-# Live HTML preview (generated)
-# preview/
+# The HTML preview is generated (see tools/make_preview.py) and ignored at the
+# repo root -- CI renders it for GitHub Pages, so it is never committed.

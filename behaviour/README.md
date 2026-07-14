@@ -64,8 +64,9 @@ skipped.
 - `build/` — the source of truth for the notebooks. Each `build_nbNN.py` emits
   its student/solutions pair; `python build/build_all.py` regenerates them all.
   Edit a builder and rebuild, or edit the `.ipynb` directly — whichever you
-  prefer. `build/make_preview.py` renders a self-contained HTML preview of every
-  notebook under `preview/` for fast review.
+  prefer. To review the notebooks as HTML, run `python ../tools/make_preview.py
+  behaviour` from the repo root and open `_site/index.html` — the same renderer that
+  publishes them to [GitHub Pages](https://stootoon.github.io/swc-en-2026/).
 - `assets/paper/` — panels cropped from `piet.pdf`, embedded in each notebook's
   intro so students see the figure they're about to reproduce.
 
