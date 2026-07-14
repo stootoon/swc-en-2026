@@ -23,7 +23,7 @@ of Piet et al. (their Figure 1D), in small steps:
 ---
 **The paper panel this notebook reproduces**
 
-<img src="../assets/paper/fig1d.png" width="760">
+<img alt="Piet et al., Figure 1D - the dynamic model's output: strategy weights drifting across a session, and the resulting licking probability tracking the data" src="../assets/paper/fig1d.png" width="760">
 
 *Fig. 1D — the dynamic model's output: the strategy weights drifting across a
 session (middle) and the resulting licking probability tracking the data (bottom).

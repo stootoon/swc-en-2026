@@ -23,7 +23,7 @@ cross-validation. It's the machinery behind Figure 2A.
 ---
 **The paper panel this notebook reproduces**
 
-<img src="../assets/paper/fig2a.png" width="320">
+<img alt="Piet et al., Figure 2A - histogram of cross-validated model performance (area under the ROC curve) across sessions, for the dynamic and static models" src="../assets/paper/fig2a.png" width="320">
 
 *Fig. 2A — cross-validated model performance (area under the ROC curve) across
 sessions. This notebook builds the ROC / AUC / cross-validation machinery behind

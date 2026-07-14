@@ -28,11 +28,11 @@ section at the end, for anyone who wants the full picture.)
 ---
 **The paper panels this notebook reproduces**
 
-<img src="../assets/paper/fig2b.png" width="300">
+<img alt="Piet et al., Figure 2B - average fitted strategy weights across sessions" src="../assets/paper/fig2b.png" width="300">
 
 *Fig. 2B — the fitted strategy weights, averaged across sessions.*
 
-<img src="../assets/paper/fig2d.png" width="320">
+<img alt="Piet et al., Figure 2D - percent change in model evidence when each strategy is removed" src="../assets/paper/fig2d.png" width="320">
 
 *Fig. 2D — how much the model's evidence drops when each strategy is removed
 (ablation). This notebook builds that ablation and the strategy indices it feeds.*

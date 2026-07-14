@@ -24,7 +24,7 @@ cleanly: the analysis recovers the two axes as separately as we built them.
 ---
 **The paper panel this notebook reproduces**
 
-<img src="../assets/paper/fig3b.png" width="720">
+<img alt="Piet et al., Figure 3B - one session's lick-bout rate and reward rate over time, with the engaged/disengaged threshold" src="../assets/paper/fig3b.png" width="720">
 
 *Fig. 3B — one session's lick-bout rate and reward rate over time, with the
 engaged/disengaged threshold. This notebook recovers that engagement state and

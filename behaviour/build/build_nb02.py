@@ -23,7 +23,7 @@ behavior — *before* we try to infer it by fitting (Notebook 3 onward).
 ---
 **The paper panel this notebook reproduces**
 
-<img src="../assets/paper/fig1b.png" width="560">
+<img alt="Piet et al., Figure 1B - lick rasters aligned to image changes, omissions, and the number of images since the last licking bout" src="../assets/paper/fig1b.png" width="560">
 
 *Fig. 1B — licking aligned to task events (image changes, omissions, and the number
 of images since the last bout). Each strategy leaves a different fingerprint here;

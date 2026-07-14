@@ -25,7 +25,7 @@ mouse is rewarded for licking when the image *changes*. A mouse might solve this
 **visually comparing** each image to the last, or by **timing** — learning roughly
 how often changes come and licking on schedule.
 
-<img src="../assets/paper/fig1a.png" width="460">
+<img alt="Piet et al., Figure 1A - the visual change-detection task: a stream of images with rewarded changes, and the two candidate strategies (visual comparison vs. learning the average time interval)" src="../assets/paper/fig1a.png" width="460">
 
 *The change-detection task (Fig. 1A).*
 

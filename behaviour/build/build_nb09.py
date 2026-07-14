@@ -25,7 +25,7 @@ which is the theme of this whole part.
 ---
 **The paper panel this notebook reproduces**
 
-<img src="../assets/paper/fig2h.png" width="640">
+<img alt="Piet et al., Figure 2H - each mouse's sessions, sorted by the mouse's average strategy index" src="../assets/paper/fig2h.png" width="640">
 
 *Fig. 2H — each mouse's sessions (dots) sorted by the mouse's average strategy
 index; the spread within a column is within-mouse, the trend across columns is

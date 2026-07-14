@@ -20,7 +20,9 @@ executes a notebook.
 from __future__ import annotations
 
 import argparse
+import base64
 import glob
+import mimetypes
 import os
 import re
 import subprocess
@@ -142,11 +144,40 @@ def nav(nbs, idx, solutions, bottom=False):
     return f'<div class="{cls}">{prev_html}<span class="mid">{mid}</span>{next_html}</div>'
 
 
-def inject_nav(path, nbs, idx, solutions):
+IMG_SRC = re.compile(r'(<img[^>]*\ssrc=")([^"]+)(")')
+
+
+def embed_local_images(html, base_dir):
+    """Inline any locally-referenced image as a data: URI.
+
+    Markdown cells reference the paper panels with a relative path
+    (``../assets/paper/figX.png``) that only resolves from the notebook's own
+    directory -- not from wherever we render to. nbconvert's --embed-images does
+    not touch raw <img> tags, so we inline them here. This also makes every page
+    self-contained, so it works from any location.
+    """
+    def repl(m):
+        pre, src, post = m.groups()
+        if src.startswith(("data:", "http://", "https://", "//")):
+            return m.group(0)
+        path = os.path.normpath(os.path.join(base_dir, src))
+        if not os.path.isfile(path):
+            print(f"    ! missing image: {src}")
+            return m.group(0)
+        mime = mimetypes.guess_type(path)[0] or "image/png"
+        with open(path, "rb") as f:
+            data = base64.b64encode(f.read()).decode("ascii")
+        return f"{pre}data:{mime};base64,{data}{post}"
+
+    return IMG_SRC.sub(repl, html)
+
+
+def inject_nav(path, nbs, idx, solutions, nb_dir):
     with open(path) as f:
         html = f.read()
     if 'class="swc-nav' in html:
         return
+    html = embed_local_images(html, nb_dir)
     html = html.replace("</head>", NAV_CSS + "</head>", 1)
     m = re.search(r"<body[^>]*>", html)
     if m:
@@ -223,11 +254,12 @@ def main():
             for ipynb in sorted(glob.glob(
                     os.path.join(ROOT, module, "notebooks", f"{slug}*.ipynb"))):
                 convert(ipynb, outdir)
+        nb_dir = os.path.join(ROOT, module, "notebooks")
         for idx, (slug, _) in enumerate(nbs):
             for solutions in (True, False):
                 p = os.path.join(outdir, page(slug, solutions))
                 if os.path.exists(p):
-                    inject_nav(p, nbs, idx, solutions)
+                    inject_nav(p, nbs, idx, solutions, nb_dir)
         write_module_index(module, nbs, outdir)
         print(f"  {module}: {len(nbs)} notebooks")
 

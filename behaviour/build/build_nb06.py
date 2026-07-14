@@ -27,7 +27,7 @@ mouse's strategy continuously.
 ---
 **The paper panel this notebook reproduces**
 
-<img src="../assets/paper/fig2f.png" width="420">
+<img alt="Piet et al., Figure 2F - sessions plotted in strategy space by their visual and timing indices" src="../assets/paper/fig2f.png" width="420">
 
 *Fig. 2F — every session placed in strategy space by its visual index and timing
 index. This notebook populates that cloud using mice that blend the two strategies.*
