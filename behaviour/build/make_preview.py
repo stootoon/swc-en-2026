@@ -5,11 +5,14 @@ Usage:
     python build/make_preview.py 03 07      # only these numbers (+ refresh index)
 
 Output goes to behaviour/preview/. Open preview/index.html in a browser and hit
-refresh after each change -- no need to reopen anything in the IDE. The solutions
-pages carry baked-in plots; the student pages show the blanks.
+refresh after each change -- no need to reopen anything in the IDE. Each page gets a
+nav bar (prev / index / next, plus a student<->solutions toggle) so you can read
+straight through. The solutions pages carry baked-in plots; the student pages show
+the blanks.
 """
 import glob
 import os
+import re
 import subprocess
 import sys
 
@@ -33,10 +36,65 @@ NOTEBOOKS = [
     ("11_hierarchical_bootstrap", "11. Hierarchical bootstrap (Part 2)"),
 ]
 
+NAV_CSS = """
+<style>
+.swc-nav{display:flex;justify-content:space-between;align-items:center;gap:1rem;
+ font:14px/1.4 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+ padding:.55rem 1.1rem;background:#f6f7f9;border-bottom:1px solid #e3e5e8}
+.swc-nav.bottom{border-bottom:none;border-top:1px solid #e3e5e8;margin-top:2rem}
+.swc-nav a{color:#2563eb;text-decoration:none;white-space:nowrap}
+.swc-nav a:hover{text-decoration:underline}
+.swc-nav .mid{color:#888;display:flex;gap:.9rem}
+.swc-nav .spacer{flex:0 0 auto;color:#c3c6ca}
+@media(prefers-color-scheme:dark){
+ .swc-nav{background:#1b1d20;border-color:#33363a}
+ .swc-nav.bottom{border-top-color:#33363a}
+ .swc-nav a{color:#6ea8fe} .swc-nav .mid{color:#888}
+}
+</style>
+"""
+
+
+def _page(slug, solutions):
+    return f"{slug}_solutions.html" if solutions else f"{slug}.html"
+
+
+def _nav(idx, solutions, bottom=False):
+    """Nav bar for the notebook at position idx (prev / index+toggle / next)."""
+    prev_html = '<span class="spacer">&nbsp;</span>'
+    next_html = '<span class="spacer">&nbsp;</span>'
+    if idx > 0:
+        slug, title = NOTEBOOKS[idx - 1]
+        prev_html = f'<a href="{_page(slug, solutions)}">&larr; {title}</a>'
+    if idx < len(NOTEBOOKS) - 1:
+        slug, title = NOTEBOOKS[idx + 1]
+        next_html = f'<a href="{_page(slug, solutions)}">{title} &rarr;</a>'
+
+    slug = NOTEBOOKS[idx][0]
+    other = _page(slug, not solutions)
+    other_label = "student version" if solutions else "solutions"
+    mid = (f'<a href="index.html">index</a>'
+           f'<a href="{other}">{other_label}</a>')
+    cls = "swc-nav bottom" if bottom else "swc-nav"
+    return f'<div class="{cls}">{prev_html}<span class="mid">{mid}</span>{next_html}</div>'
+
+
+def _inject_nav(path, idx, solutions):
+    with open(path) as f:
+        html = f.read()
+    if 'class="swc-nav' in html:      # already injected
+        return
+    html = html.replace("</head>", NAV_CSS + "</head>", 1)
+    m = re.search(r"<body[^>]*>", html)
+    if m:
+        html = html[: m.end()] + _nav(idx, solutions) + html[m.end():]
+    html = html.replace("</body>", _nav(idx, solutions, bottom=True) + "</body>", 1)
+    with open(path, "w") as f:
+        f.write(html)
+
 
 def convert(ipynb):
-    # --embed-images base64-inlines the paper panels so the preview HTML is
-    # self-contained and never depends on relative asset paths.
+    # --embed-images inlines any images referenced from markdown cells.
     subprocess.run([sys.executable, "-m", "jupyter", "nbconvert", "--to", "html",
                     "--embed-images", "--output-dir", OUT, ipynb],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -45,14 +103,12 @@ def convert(ipynb):
 def write_index():
     rows = []
     for slug, title in NOTEBOOKS:
-        sol = f"{slug}_solutions.html"
-        stu = f"{slug}.html"
         links = []
-        if os.path.exists(os.path.join(OUT, sol)):
-            links.append(f'<a href="{sol}">solutions</a>')
-        if os.path.exists(os.path.join(OUT, stu)):
-            links.append(f'<a class="muted" href="{stu}">student</a>')
-        rows.append(f'<li><span>{title}</span>{" &middot; ".join(links)}</li>')
+        if os.path.exists(os.path.join(OUT, _page(slug, True))):
+            links.append(f'<a href="{_page(slug, True)}">solutions</a>')
+        if os.path.exists(os.path.join(OUT, _page(slug, False))):
+            links.append(f'<a class="muted" href="{_page(slug, False)}">student</a>')
+        rows.append(f'<li><span>{title}</span>{"".join(links)}</li>')
     html = f"""<!doctype html><meta charset="utf-8"><title>Behaviour module — preview</title>
 <style>
  body{{font:16px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;max-width:640px;margin:3rem auto;padding:0 1rem;color:#222}}
@@ -63,7 +119,7 @@ def write_index():
  @media(prefers-color-scheme:dark){{body{{background:#111;color:#ddd}}li{{border-color:#333}}a{{color:#6ea8fe}}}}
 </style>
 <h1>Behaviour module — notebook preview</h1>
-<div class="sub">SWC ENC 2026. Refresh this page after each change.</div>
+<div class="sub">SWC ENC 2026. Refresh this page after each change. Each notebook links on to the next.</div>
 <ul>
 {os.linesep.join(rows)}
 </ul>"""
@@ -74,10 +130,15 @@ def write_index():
 def main():
     os.makedirs(OUT, exist_ok=True)
     nums = sys.argv[1:]
-    slugs = [s for s, _ in NOTEBOOKS if not nums or s[:2] in nums]
-    for slug in slugs:
+    for idx, (slug, _) in enumerate(NOTEBOOKS):
+        if nums and slug[:2] not in nums:
+            continue
         for ipynb in sorted(glob.glob(os.path.join(NB_DIR, f"{slug}*.ipynb"))):
             convert(ipynb)
+        for solutions in (True, False):
+            page = os.path.join(OUT, _page(slug, solutions))
+            if os.path.exists(page):
+                _inject_nav(page, idx, solutions)
     write_index()
     print(f"preview -> {os.path.join(OUT, 'index.html')}")
 
