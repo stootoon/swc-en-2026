@@ -89,6 +89,17 @@ ps.plotting.draw_pipeline(ax); plt.show()
     md(r"""
 ## How the notebooks work
 
+**Read at your own depth.** The material comes in three layers, so you can go as deep
+as you like on each technique:
+
+1. **The big picture** — the plain-language prose and the code cells. Enough to
+   understand what each step does and run it. If that's all you want, skim and go.
+2. **The intuition** — worked examples and figures that build up *why* a method works
+   (e.g. seeing a signal as a mixture of frequencies before we filter it).
+3. **The math** — collapsible **▸ Go deeper** blocks with the underlying equations, for
+   those who want them. They're folded away by default; open them if you're curious,
+   skip them freely if not.
+
 - Each notebook comes in two versions: a **student** copy with `# YOUR CODE HERE`
   blanks, and a **solutions** copy with everything worked out.
 - The backend package **`picosort`** generates the synthetic recording and holds

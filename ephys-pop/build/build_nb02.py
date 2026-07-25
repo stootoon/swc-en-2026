@@ -72,6 +72,25 @@ pluses and minuses cancel and the sum is near zero. Do this for *every* frequenc
 you get a recipe listing how much of each frequency is present. The **power spectrum**
 is that recipe, plotted: power (how much) versus frequency.
 
+<details>
+<summary><b>▸ Go deeper: the Fourier transform as an equation (optional)</b></summary>
+
+"Compare the signal to a sine wave of each frequency and add up" is, written out, the
+**discrete Fourier transform**. For samples $x_0,\dots,x_{N-1}$, the amount of
+frequency index $k$ is
+
+$$X_k \;=\; \sum_{n=0}^{N-1} x_n\, e^{-2\pi i\, k n / N}.$$
+
+The wiggling factor is just a sine and cosine bundled together, since
+$e^{-2\pi i\,kn/N} = \cos(2\pi kn/N) - i\,\sin(2\pi kn/N)$. So multiplying $x_n$ by it
+and summing *is* the "compare and add up" from above — done against a cosine and a
+sine at once. The result $X_k$ is a complex number: its magnitude $|X_k|$ says how
+much of that frequency is present, its angle says the phase. Frequency index $k$
+corresponds to $k\,f_s/N$ hertz, and the **power spectrum** is $|X_k|^2$ — exactly
+`np.abs(np.fft.rfft(x))**2`. (`rfft` is the fast $O(N\log N)$ algorithm for this sum,
+returning just the non-negative frequencies.)
+</details>
+
 **Exercise 1** *(~4 min · easy)*. Complete `power_spectrum`: use `np.fft.rfft` to get the
 frequency content and `np.fft.rfftfreq` for the matching frequency axis; power is the
 squared magnitude `np.abs(...)**2`.
@@ -184,6 +203,24 @@ is near 1 (kept). A low order rolls off gently; a high order approaches the idea
 brick wall but can introduce other artefacts, so a **middle order (3–4) is the usual
 choice** — flat where it matters, sharp enough, well-behaved. That's what we'll use.
 
+<details>
+<summary><b>▸ Go deeper: the Butterworth response equation (optional)</b></summary>
+
+Those S-curves have a one-line formula. A Butterworth filter of order $n$ with cutoff
+$f_c$ has squared gain (low-pass form)
+
+$$|H(f)|^2 \;=\; \frac{1}{1 + (f/f_c)^{2n}}.$$
+
+Read off the behaviour: at $f = f_c$ the denominator is $2$, so the gain is
+$1/\sqrt{2} \approx 0.707$ **for every order** — that's the $-3$ dB point where all the
+curves crossed. As $n$ grows, $(f/f_c)^{2n}$ flips from $\approx 0$ to $\gg 1$ ever
+more abruptly around $f_c$, sharpening the transition toward the ideal brick wall. And
+"maximally flat" is precise: this $|H|^2$ has the most possible derivatives equal to
+zero at $f=0$, so the passband is as ripple-free as any filter of that order can be.
+(The high-pass we actually use is the same with $f$ and $f_c$ swapped,
+$|H|^2 = 1/(1+(f_c/f)^{2n})$.)
+</details>
+
 ## 4. High-pass the recording
 
 Now the real thing. In an extracellular recording the **spikes are fast** (their
@@ -279,19 +316,33 @@ $1/\sqrt{\text{eigenvalue}}$. Then we apply it and check the covariance is now c
 > diagonal with near-zero (blank) off-diagonal. Stuck? Use `ps.whitening_matrix(cov)`.
 
 <details>
-<summary><b>▸ A little more on why this works (optional)</b></summary>
+<summary><b>▸ Go deeper: the whitening matrix, in symbols (optional)</b></summary>
 
-Whitening asks for a transform $W$ so the transformed noise has **no** correlation
-between channels and equal variance — its covariance is the identity matrix $I$. The
-covariance $C$ is a symmetric matrix, so it has a set of perpendicular
-**eigen-directions**, each with an **eigenvalue** giving the noise variance along it
-(the bumpy landscape of correlated noise, described by its natural axes). If we rotate
-onto those axes, shrink each one by $1/\sqrt{\text{its variance}}$ so they all have
-variance 1, and rotate back, the noise comes out perfectly round — equal in every
-direction, uncorrelated. That "rotate, rescale, rotate back" is exactly
-$W = V\,\Lambda^{-1/2}\,V^{\top}$, the matrix square root of $C^{-1}$, which the code
-builds with `np.linalg.eigh`. (The tiny $\epsilon$ just stops the rescaling from
-blowing up along directions that are almost pure zero-variance noise.)
+Write the noise across channels at one instant as a vector $n$ with covariance
+$C = \mathbb{E}[n\,n^{\top}]$ (the grid you just plotted). We want a linear map $W$ so
+the transformed noise $z = Wn$ has covariance equal to the identity — unit variance on
+every channel, zero correlation between them:
+
+$$\mathrm{Cov}(z) = \mathbb{E}[Wn\,n^{\top}W^{\top}] = W\,C\,W^{\top} = I.$$
+
+Because $C$ is symmetric it has an **eigen-decomposition** $C = V\Lambda V^{\top}$: the
+columns of $V$ are perpendicular eigen-directions and $\Lambda$ holds the noise
+variance along each. Taking the symmetric square root
+
+$$W = C^{-1/2} = V\,\Lambda^{-1/2}\,V^{\top}$$
+
+does the job, since $W C W^{\top} = V\Lambda^{-1/2}V^{\top}\,V\Lambda V^{\top}\,
+V\Lambda^{-1/2}V^{\top} = V\Lambda^{-1/2}\Lambda\Lambda^{-1/2}V^{\top} = VV^{\top} = I.$
+In words that's "**rotate** onto the eigen-axes ($V^{\top}$), **rescale** each to unit
+variance ($\Lambda^{-1/2}$), **rotate back** ($V$)" — which is what `np.linalg.eigh`
+plus the $1/\sqrt{\lambda}$ rescaling build. Any rotation of $W$ also whitens; this
+symmetric choice (**ZCA**) is the one closest to the identity, so channels stay in
+place. The $\epsilon$ floors tiny eigenvalues, since $1/\sqrt{\lambda}$ would otherwise
+explode along near-zero-variance directions.
+
+This connects forward to **Notebook 6**: the statistically optimal detector for a
+template $s$ in noise of covariance $C$ is $s^{\top}C^{-1}x$; whitening the data first
+turns that into a plain template match, getting the optimal detector for free.
 </details>
 """,),
     code(
