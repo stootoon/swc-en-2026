@@ -8,8 +8,9 @@ import os
 
 HERE = os.path.dirname(__file__)
 BUILDERS = [
-    "build_nb00.py",
-    "build_nb01.py",
+    "build_nb00.py", "build_nb01.py", "build_nb02.py", "build_nb03.py",
+    "build_nb04.py", "build_nb05.py", "build_nb06.py", "build_nb07.py",
+    "build_nb08.py",
 ]
 
 for name in BUILDERS:

@@ -30,6 +30,20 @@ neuron fired when*. That means (1) cleaning up the signal, (2) detecting spikes,
 (3) describing each spike compactly, (4) grouping spikes into **units** (putative
 neurons), and (5) resolving overlapping spikes. Kilosort does all of this; picosort
 does a simplified, transparent version of each step.
+
+Here's the physical picture — a probe studded with hundreds of recording sites, and
+a nearby neuron whose spike lands on several channels at once, largest on the
+closest:
+""",),
+    code(r"""
+import numpy as np
+import matplotlib.pyplot as plt
+import picosort as ps
+
+fig = plt.figure(figsize=(11, 6))
+ps.plotting.draw_probe_schematic(plt.subplot(1, 2, 1))
+ps.plotting.draw_spike_on_probe(plt.subplot(1, 2, 2))
+plt.tight_layout(); plt.show()
 """,),
     md(r"""
 ## Why synthetic data?
@@ -66,7 +80,11 @@ Notebook 8 runs the whole thing and grades it against ground truth.
 | 8 | Scoring | match sorted spikes to ground truth | precision/recall, hits/misses; what "good sorting" means |
 
 The Kilosort4 stages we're simplifying are highlighted along the way; the paper is
-Pachitariu et al. (2024), *Nature Methods*.
+Pachitariu et al. (2024), *Nature Methods*. The stages chain left to right:
+""",),
+    code(r"""
+fig, ax = plt.subplots(figsize=(12, 2.2))
+ps.plotting.draw_pipeline(ax); plt.show()
 """,),
     md(r"""
 ## How the notebooks work

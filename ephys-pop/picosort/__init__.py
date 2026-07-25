@@ -25,6 +25,38 @@ from .generate import (
     average_waveform,
     TEMPLATE_SAMPLES,
 )
+from .preprocess import (
+    highpass_filter,
+    common_average_reference,
+    noise_covariance,
+    whitening_matrix,
+    whiten,
+    preprocess,
+)
+from .detect import channel_noise, detect_spikes, extract_snippets
+from .features import (
+    localize,
+    peak_waveforms,
+    pca_features,
+    explained_variance,
+    spike_features,
+)
+from .cluster import (
+    graph_cluster,
+    cluster_spikes,
+    bic_curve,
+    templates_from_labels,
+    tsne_embedding,
+)
+from .match import matching_pursuit
+from .pipeline import run_picosort, SortResult
+from .postprocess import (
+    correlogram,
+    refractory_violations,
+    coincidence_fraction,
+    find_duplicate_pairs,
+)
+from .evaluate import match_to_truth, summary, UnitScore
 from . import plotting
 
 __all__ = [
@@ -41,5 +73,41 @@ __all__ = [
     "peak_channel",
     "average_waveform",
     "TEMPLATE_SAMPLES",
+    # preprocessing
+    "highpass_filter",
+    "common_average_reference",
+    "noise_covariance",
+    "whitening_matrix",
+    "whiten",
+    "preprocess",
+    # detection & features
+    "channel_noise",
+    "detect_spikes",
+    "extract_snippets",
+    "localize",
+    "peak_waveforms",
+    "pca_features",
+    "explained_variance",
+    "spike_features",
+    # clustering
+    "graph_cluster",
+    "cluster_spikes",
+    "bic_curve",
+    "templates_from_labels",
+    "tsne_embedding",
+    # matching pursuit
+    "matching_pursuit",
+    # full pipeline
+    "run_picosort",
+    "SortResult",
+    # postprocessing
+    "correlogram",
+    "refractory_violations",
+    "coincidence_fraction",
+    "find_duplicate_pairs",
+    # evaluation
+    "match_to_truth",
+    "summary",
+    "UnitScore",
     "plotting",
 ]

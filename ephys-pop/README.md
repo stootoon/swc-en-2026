@@ -22,7 +22,9 @@ Live previews: **https://stootoon.github.io/swc-en-2026/** · notebooks are in
 | 7 | Merging & cleanup | cross-correlograms, duplicate removal |
 | 8 | Scoring | match to ground truth; precision/recall |
 
-*(Notebooks 2–8 are being built out; 0–1 are in place.)*
+The full pipeline sorts the synthetic data at ~100% recall/precision (it's a clean
+teaching example); Notebooks 7–8 introduce controlled errors and stress tests to show
+what the QC and scoring tools reveal.
 
 ## Run it locally
 
