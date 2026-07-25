@@ -44,6 +44,31 @@ within a tolerance (half a millisecond). Counting hits both ways gives recall (o
 true spikes, how many were found) and precision (of the sorted spikes, how many are
 real).
 
+<details>
+<summary><b>▸ The math: precision, recall, and the matching problem (optional)</b></summary>
+
+With hits (true positives, $\mathrm{TP}$), misses (false negatives, $\mathrm{FN}$),
+and false positives ($\mathrm{FP}$), the two scores are
+
+$$\text{recall} = \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FN}}
+\quad(\text{of the true spikes, the fraction found}),\qquad
+\text{precision} = \frac{\mathrm{TP}}{\mathrm{TP}+\mathrm{FP}}
+\quad(\text{of the sorted spikes, the fraction real}).$$
+
+They trade off — a sorter that fires constantly has high recall but poor precision —
+which is why we report both, and the "agreement"
+$\mathrm{TP}/(\mathrm{TP}+\mathrm{FN}+\mathrm{FP})$ that penalises either failure.
+
+But there's a subtlety *before* you can count anything: sorted unit labels are
+arbitrary, so **which sorted unit corresponds to which true neuron?** Build the matrix
+of hit counts between every (sorted, true) pair, and choose the one-to-one pairing
+that maximises the total — a **linear assignment problem**. Trying all pairings is
+$k!$, but the **Hungarian algorithm** solves it in $O(k^3)$; that's what
+`scipy.optimize.linear_sum_assignment` (inside `ps.match_to_truth`) does. A clean sort
+then shows up as a near-diagonal overlap matrix: each sorted unit lights up exactly one
+true neuron.
+</details>
+
 **Exercise 1** *(~6 min)*. Complete `count_hits`: how many spikes in `a` have a spike in `b`
 within `tol` samples. (Sort `b`, use `np.searchsorted` to find each `a`'s nearest
 neighbour.)

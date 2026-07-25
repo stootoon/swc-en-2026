@@ -35,6 +35,26 @@ can set one threshold — say **5 sigma** — that means the same thing everywhe
 estimate each channel's noise robustly with the **median absolute deviation** (the
 MAD, which a few big spikes can't inflate) and mark every trough that dips below
 $-5\sigma$.
+
+<details>
+<summary><b>▸ The math: the MAD, and why 5σ (optional)</b></summary>
+
+**Why the MAD, and the 0.6745.** The ordinary standard deviation is wrecked by the
+very spikes we're hunting — a handful of large outliers inflate it. The **median
+absolute deviation**, $\mathrm{MAD} = \mathrm{median}(|x|)$, ignores them (the median
+doesn't care about the tails). For Gaussian noise the MAD and the true $\sigma$ are
+related by a fixed constant: $\mathrm{MAD} = \Phi^{-1}(0.75)\,\sigma \approx 0.6745\,\sigma$,
+so $\hat\sigma = \mathrm{MAD}/0.6745$ recovers $\sigma$ robustly (this is the
+`/0.6745` in `channel_noise`).
+
+**Why 5σ.** The threshold trades misses against false alarms. Under Gaussian noise,
+the chance a single sample dips below $-\theta\sigma$ is $\Phi(-\theta)$. At
+$\theta = 5$ that's $\Phi(-5) \approx 3\times10^{-7}$; over a 20-second, 32-channel
+recording ($\sim\!2\times10^7$ samples per channel) you'd expect only a handful of
+noise crossings per channel — rare enough that a threshold crossing is almost always
+a real spike, while still low enough to catch all but the faintest units. Lower it and
+false positives explode; raise it and you lose small spikes.
+</details>
 """,),
     code(r"""
 sd = ps.channel_noise(whitened)          # robust noise sigma per channel

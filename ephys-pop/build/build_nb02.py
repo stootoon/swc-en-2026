@@ -115,6 +115,39 @@ covariance $C = V \Lambda V^\top$: take $W = V \Lambda^{-1/2} V^\top$. (This
 symmetric "ZCA" form keeps channels in place, so a whitened trace still reads
 channel-by-channel like the original — just decorrelated.)
 
+<details>
+<summary><b>▸ The math: why <i>W = C</i><sup>−1/2</sup> whitens (optional)</b></summary>
+
+Write the noise on the array at one time as a vector $n$ with covariance
+$C = \mathbb{E}[n\,n^\top]$. We want a linear map $W$ so the transformed noise
+$z = Wn$ has **identity** covariance — unit variance on every channel, zero
+correlation between them:
+
+$$\mathrm{Cov}(z) = \mathbb{E}[Wn\,n^\top W^\top] = W\,C\,W^\top = I.$$
+
+Any $W$ with $W^\top W = C^{-1}$ works, so the solution is only fixed up to a
+rotation. Using the eigen-decomposition $C = V\Lambda V^\top$ (with $V$ orthonormal
+and $\Lambda$ the positive eigenvalues), take the **symmetric** root
+
+$$W = C^{-1/2} = V\,\Lambda^{-1/2}\,V^\top .$$
+
+Then $W C W^\top = V\Lambda^{-1/2}V^\top\,V\Lambda V^\top\,V\Lambda^{-1/2}V^\top =
+V\,\Lambda^{-1/2}\Lambda\,\Lambda^{-1/2}\,V^\top = VV^\top = I.$ ✓
+
+Two footnotes. **(i) Why symmetric (ZCA) and not PCA whitening?** $W = \Lambda^{-1/2}V^\top$
+*also* whitens, but it rotates the data into the eigenbasis, scrambling channel
+identity; the symmetric root is the whitening matrix **closest to the identity**
+(it minimises $\lVert W - I\rVert$), so a whitened trace still looks channel-by-channel
+like the original. **(ii) The $\epsilon$** in the code regularises tiny eigenvalues:
+$1/\sqrt{\lambda}$ blows up when $\lambda\to 0$, amplifying directions that are all
+noise, so we add a small floor.
+
+This also connects forward to **Notebook 6**: under Gaussian noise with covariance
+$C$, the statistically optimal detector for a template $s$ is the *whitened* matched
+filter $s^\top C^{-1} x$. Whitening the data first lets us then use a plain matched
+filter and get the optimal detector for free.
+</details>
+
 **Exercise 2** *(~8 min · meaty)*. Complete `whitening_matrix`: eigen-decompose the covariance
 with `np.linalg.eigh`, and form $V \,\mathrm{diag}(1/\sqrt{\lambda+\epsilon})\, V^\top$.
 Then we apply it and check the covariance is now diagonal.

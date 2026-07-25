@@ -48,6 +48,37 @@ which rewards fit but penalises extra clusters. The BIC falls steeply as $k$ cli
 toward the true number, then flattens — the **elbow** marks how many units are really
 there.
 
+<details>
+<summary><b>▸ The math: Gaussian mixtures, and where the BIC comes from (optional)</b></summary>
+
+**The model.** A Gaussian mixture says each spike's feature vector $x$ was drawn from
+one of $k$ Gaussians — one per unit — with unknown mixing weights $\pi_j$, means
+$\mu_j$, and covariances $\Sigma_j$:
+
+$$p(x \mid \theta) = \sum_{j=1}^{k} \pi_j\, \mathcal{N}(x;\, \mu_j, \Sigma_j).$$
+
+We fit $\theta$ by maximising the log-likelihood $\log \hat L = \sum_i \log p(x_i\mid\theta)$,
+using the **EM algorithm**: alternate between the **E-step** (compute each spike's
+*responsibility* — the posterior probability it belongs to unit $j$) and the
+**M-step** (re-estimate each $\pi_j, \mu_j, \Sigma_j$ as responsibility-weighted
+averages). This is a soft version of the assign-then-average loop you already know.
+(k-means is the special case with equal spherical $\Sigma_j = \sigma^2 I$ and *hard*
+responsibilities — which is exactly why it merges close clusters and splits elongated
+ones, and why the full mixture does better here.)
+
+**The penalty.** More clusters always fit better, so raw likelihood can't choose $k$.
+The BIC adds a complexity penalty:
+
+$$\mathrm{BIC}(k) = -2\log \hat L \;+\; m_k \log n,$$
+
+with $m_k$ the number of free parameters and $n$ the number of spikes. It is a
+large-$n$ approximation (via **Laplace's method**) to $-2\log p(\text{data}\mid k)$,
+the *model evidence* — the same Bayesian quantity that decided "which strategies
+matter" in the behaviour module, here deciding "how many neurons are there." Extra
+clusters beyond the truth buy almost no likelihood but keep paying $\log n$ per
+parameter, so the curve flattens: the **elbow is the honest unit count.**
+</details>
+
 **Exercise 1** *(~5 min)*. Compute the BIC curve over `k = 2..10` and read off the elbow.
 
 > **Check / unstuck.** The curve should drop hard through **k = 6**, then level off.

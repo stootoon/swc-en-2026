@@ -105,6 +105,35 @@ waveforms actually vary and re-expresses each waveform by its **scores** on them
 Since the spikes of one neuron are near-copies, a couple of components capture almost
 all the variation. Look at the **scree plot** — the fraction of variance each
 component explains:
+
+<details>
+<summary><b>▸ The math: what PCA actually computes (optional)</b></summary>
+
+Stack the (centred) waveforms as rows of a matrix $X$ of size $n \times p$
+($n$ spikes, $p = 61$ samples). We want the single direction $v$ (a unit vector in
+waveform space) along which the projected waveforms $Xv$ vary the most:
+
+$$\max_{\lVert v\rVert = 1}\ \mathrm{Var}(Xv) = \max_{\lVert v\rVert=1}\ v^\top C\, v,
+\qquad C = \tfrac{1}{n} X^\top X$$
+
+where $C$ is the $p\times p$ covariance of the waveforms. The Lagrangian
+$v^\top C v - \lambda(v^\top v - 1)$ has stationary points where
+
+$$C\,v = \lambda\, v,$$
+
+so the principal directions are the **eigenvectors of the covariance**, and each
+one's variance is its **eigenvalue** $\lambda$. The second PC is the next eigenvector,
+and so on — orthogonal directions of decreasing variance.
+
+In practice we skip forming $C$ and take the **singular value decomposition**
+$X = U S V^\top$ directly: the columns of $V$ are the principal directions (the
+`components`), the **scores** are $XV = US$, and the variance explained by component
+$k$ is $s_k^2 / \sum_j s_j^2$ — the scree plot. Why a *few* components suffice is the
+**Eckart–Young theorem**: keeping the top $k$ gives the best possible rank-$k$
+approximation of $X$ (smallest reconstruction error). Because every spike of a neuron
+is nearly the same waveform, $X$ is close to low-rank, so 2–3 components rebuild it
+almost perfectly and the rest is noise.
+</details>
 """,),
     code(r"""
 waveforms = ps.peak_waveforms(snippets)          # (n_spikes, n_samples)

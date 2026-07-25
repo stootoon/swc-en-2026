@@ -115,6 +115,29 @@ a **Poisson spike train** for each, superposes their templates into the traces, 
 buries everything in **spatially correlated noise** plus a slow **common-mode**
 fluctuation (both of which we'll clean up in Notebook 2). It hands back the traces
 *and* the ground truth: every spike time, every label, every template.
+
+<details>
+<summary><b>▸ The math: the generative model the whole pipeline inverts (optional)</b></summary>
+
+Every stage of this module is undoing one equation. The recorded voltage on channel
+$c$ at time $t$ is a **linear superposition** of all neurons' spikes plus noise:
+
+$$V_c(t) \;=\; \sum_{j}\ \sum_{s \in \text{spikes of unit } j} W_{j,c}(t - t_s)\ \;+\; \eta_c(t),$$
+
+where $W_{j,c}$ is unit $j$'s template on channel $c$ (a spatial footprint × a
+temporal waveform), $t_s$ are its spike times (a Poisson process), and $\eta$ is the
+noise. Reading it left to right is the *forward* model — what we just built. Spike
+sorting reads it **right to left**: given only $V$, recover the unit count, the
+templates $W_j$, and every spike time $t_s$.
+
+That framing tells you exactly what each later notebook is for. The noise $\eta$ is
+spatially correlated → **whiten** it (NB2). The $t_s$ are sparse threshold-crossing
+events → **detect** them (NB3). The templates $W_j$ are unknown → **cluster** similar
+spikes and average them (NB4–5). And because the model is a *sum*, overlapping spikes
+add linearly → they can be pulled apart by fitting the templates back, one at a time
+(**matching pursuit**, NB6). Because it's synthetic, we know every term on the right,
+so we can grade the inversion exactly (NB8).
+</details>
 """,),
     code(r"""
 rec = ps.make_recording(n_units=6, duration_s=20.0, seed=0)

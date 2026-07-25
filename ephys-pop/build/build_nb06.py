@@ -68,6 +68,37 @@ An $a$ near 1 means the template fits at full size — a spike of unit $j$ is th
 **score** (how much subtracting it reduces the leftover error) is $a^2\lVert
 \text{template}_j\rVert^2$.
 
+<details>
+<summary><b>▸ The math: where these formulas come from (optional)</b></summary>
+
+**The amplitude is least squares.** Model the trace window as a scaled template plus
+noise, $x = a\,s + \text{noise}$, and pick $a$ to minimise the squared error
+$\lVert x - a s\rVert^2$. Setting the derivative to zero,
+$\frac{d}{da}\lVert x - as\rVert^2 = -2\,\langle x, s\rangle + 2a\lVert s\rVert^2 = 0$,
+gives
+
+$$a = \frac{\langle x, s\rangle}{\lVert s\rVert^2}.$$
+
+Substituting back, the error *drops* by exactly $a^2\lVert s\rVert^2$ — that's the
+**score**, so "best score" = "explains the most trace."
+
+**Why correlation is the right detector.** Among all linear filters $w$, which one
+best flags the presence of $s$ in white noise? Maximising the signal-to-noise ratio
+$\langle w, s\rangle^2 / \lVert w\rVert^2$ is answered by the **Cauchy–Schwarz
+inequality**: it's largest when $w \propto s$. So the optimal detector *is*
+correlation with the template — the **matched filter**. (If the noise is coloured
+with covariance $C$, the optimum becomes $w \propto C^{-1}s$ — matched filtering on
+*whitened* data, which is exactly why Notebook 2 whitened first.)
+
+**Matching pursuit is greedy sparse coding.** We're approximating the whole recording
+as a sparse sum of templates, $x \approx \sum_i a_i\, s_{k_i}(t - \tau_i)$ — ideally
+the fewest spikes that explain the trace. Finding the truly sparsest set is
+NP-hard, so matching pursuit takes the **greedy** route: repeatedly add the single
+(template, time) with the largest score, subtract it, and recurse on the residual.
+Each step is the least-squares fit above; peeling in order of score is what lets it
+separate two overlapping spikes that a single-label clusterer cannot.
+</details>
+
 **Exercise 1** *(~6 min)*. Complete `fit_amplitude`: given a trace window and a template
 (both `(n_channels, n_samples)`), return $a$.
 

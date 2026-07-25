@@ -52,6 +52,28 @@ in the other). A unit's **auto-correlogram** (itself vs itself) reveals the
 refractory period as a **hole at zero lag**: the neuron never fires twice within
 ~1–2 ms.
 
+<details>
+<summary><b>▸ The math: what a correlogram measures, and the flat baseline (optional)</b></summary>
+
+Think of each unit as a **point process** — a random set of spike times. The
+cross-correlogram estimates the **cross-intensity**: given a spike of unit A, the
+rate of unit B's spikes at a lag $\tau$ later. If the two units are **independent
+Poisson** processes with rates $\lambda_A, \lambda_B$, then B's spikes near an A spike
+are just B's ordinary spikes — no relationship — so the expected count in a bin of
+width $\Delta$ over a recording of length $T$ is flat:
+
+$$\mathbb{E}[\text{count in bin at lag }\tau] \;=\; \lambda_A\,\lambda_B\,\Delta\,T,$$
+
+independent of $\tau$. That flat line is the **chance baseline**; structure is any
+departure from it. The **refractory hole** is the sharpest such departure: a real
+neuron's own biophysics forbid a second spike within $\sim$1–2 ms, so its
+auto-correlogram is pinned near zero at small lags — something no pair of *distinct*
+neurons produces. Two spike trains whose cross-correlogram has that hole therefore
+can't be two neurons: they're one, over-split (the merge rule of section 2). A pooled
+train's **refractory-violation rate** — the fraction of inter-spike intervals below
+$\sim$1.5 ms — is the same idea reduced to a single number.
+</details>
+
 **Exercise 1** *(~7 min)*. Complete `correlogram`: for each spike in `ta`, add the
 differences to all spikes of `tb` that fall within `±window_ms` into a histogram.
 Return the bin centres (ms) and counts.
