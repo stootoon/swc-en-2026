@@ -1,0 +1,8 @@
+# SWC ENC 2026 — ephys-pop (spike sorting) module
+# Tested with Python 3.9. Versions are lower bounds; newer should work.
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.7
+scikit-learn>=1.3
+jupyterlab>=4.0
+ipykernel>=6.0
