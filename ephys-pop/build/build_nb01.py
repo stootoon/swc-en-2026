@@ -117,7 +117,7 @@ fluctuation (both of which we'll clean up in Notebook 2). It hands back the trac
 *and* the ground truth: every spike time, every label, every template.
 
 <details>
-<summary><b>▸ The math: the generative model the whole pipeline inverts (optional)</b></summary>
+<summary><b>▸ Go deeper: the generative model the whole pipeline inverts (optional)</b></summary>
 
 Every stage of this module is undoing one equation. The recorded voltage on channel
 $c$ at time $t$ is a **linear superposition** of all neurons' spikes plus noise:

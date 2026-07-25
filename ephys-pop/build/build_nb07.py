@@ -53,7 +53,7 @@ refractory period as a **hole at zero lag**: the neuron never fires twice within
 ~1–2 ms.
 
 <details>
-<summary><b>▸ The math: what a correlogram measures, and the flat baseline (optional)</b></summary>
+<summary><b>▸ Go deeper: what a correlogram measures, and the flat baseline (optional)</b></summary>
 
 Think of each unit as a **point process** — a random set of spike times. The
 cross-correlogram estimates the **cross-intensity**: given a spike of unit A, the

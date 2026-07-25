@@ -69,7 +69,7 @@ An $a$ near 1 means the template fits at full size — a spike of unit $j$ is th
 \text{template}_j\rVert^2$.
 
 <details>
-<summary><b>▸ The math: where these formulas come from (optional)</b></summary>
+<summary><b>▸ Go deeper: where these formulas come from (optional)</b></summary>
 
 **The amplitude is least squares.** Model the trace window as a scaled template plus
 noise, $x = a\,s + \text{noise}$, and pick $a$ to minimise the squared error

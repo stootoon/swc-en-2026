@@ -45,7 +45,7 @@ true spikes, how many were found) and precision (of the sorted spikes, how many 
 real).
 
 <details>
-<summary><b>▸ The math: precision, recall, and the matching problem (optional)</b></summary>
+<summary><b>▸ Go deeper: precision, recall, and the matching problem (optional)</b></summary>
 
 With hits (true positives, $\mathrm{TP}$), misses (false negatives, $\mathrm{FN}$),
 and false positives ($\mathrm{FP}$), the two scores are

@@ -37,7 +37,7 @@ MAD, which a few big spikes can't inflate) and mark every trough that dips below
 $-5\sigma$.
 
 <details>
-<summary><b>▸ The math: the MAD, and why 5σ (optional)</b></summary>
+<summary><b>▸ Go deeper: the MAD, and why 5σ (optional)</b></summary>
 
 **Why the MAD, and the 0.6745.** The ordinary standard deviation is wrecked by the
 very spikes we're hunting — a handful of large outliers inflate it. The **median

@@ -49,7 +49,7 @@ toward the true number, then flattens — the **elbow** marks how many units are
 there.
 
 <details>
-<summary><b>▸ The math: Gaussian mixtures, and where the BIC comes from (optional)</b></summary>
+<summary><b>▸ Go deeper: Gaussian mixtures, and where the BIC comes from (optional)</b></summary>
 
 **The model.** A Gaussian mixture says each spike's feature vector $x$ was drawn from
 one of $k$ Gaussians — one per unit — with unknown mixing weights $\pi_j$, means

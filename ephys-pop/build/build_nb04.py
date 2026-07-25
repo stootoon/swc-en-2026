@@ -107,7 +107,7 @@ all the variation. Look at the **scree plot** — the fraction of variance each
 component explains:
 
 <details>
-<summary><b>▸ The math: what PCA actually computes (optional)</b></summary>
+<summary><b>▸ Go deeper: what PCA actually computes (optional)</b></summary>
 
 Stack the (centred) waveforms as rows of a matrix $X$ of size $n \times p$
 ($n$ spikes, $p = 61$ samples). We want the single direction $v$ (a unit vector in
