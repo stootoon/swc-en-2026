@@ -102,9 +102,38 @@ can't tell them apart, but shape can. The trouble is a waveform is 61 numbers; w
 want a couple. **Principal component analysis** finds the few directions along which
 waveforms actually vary and re-expresses each waveform by its **scores** on them.
 
-Since the spikes of one neuron are near-copies, a couple of components capture almost
-all the variation. Look at the **scree plot** — the fraction of variance each
-component explains:
+**The idea in two dimensions first.** Remember the tilted cloud of two channels' noise
+in Notebook 2? A cloud like that has a **long axis** (the direction it spreads most)
+and a short axis at right angles. PCA finds those axes. The long axis is **PC1**; a
+point's position along it — its **score** — captures most of what makes that point
+different from the others, in a single number.
+""",),
+    code(r"""
+# A cloud of 2-D points, stretched and tilted (like the neighbour-channel cloud in NB2).
+rng = np.random.default_rng(1)
+cloud = rng.normal(size=(400, 2)) @ np.array([[2.4, 1.3], [0.0, 0.7]])
+cloud = cloud - cloud.mean(0)
+U, S, Vt = np.linalg.svd(cloud, full_matrices=False)   # PCA: axes are the singular vectors
+
+plt.figure(figsize=(4.8, 4.8))
+plt.scatter(cloud[:, 0], cloud[:, 1], s=8, alpha=0.4)
+for k, color in zip(range(2), ["tab:red", "tab:orange"]):
+    v = Vt[k] * (S[k] / np.sqrt(len(cloud))) * 2
+    plt.arrow(0, 0, v[0], v[1], color=color, width=0.06, length_includes_head=True)
+    plt.text(v[0] * 1.15, v[1] * 1.15, f"PC{k+1}", color=color, fontweight="bold")
+plt.gca().set_aspect("equal"); plt.xlabel("feature 1"); plt.ylabel("feature 2")
+plt.title("PCA finds the axes of most spread"); plt.show()
+""",),
+    md(r"""
+PC1 (red) points along the length of the cloud — the direction of greatest spread; PC2
+(orange) is the leftover, perpendicular direction. Describing each point by its PC1
+score alone throws away only the little bit of width in the PC2 direction.
+
+Our waveforms are points in **61 dimensions**, not two — but PCA does exactly the same
+thing: find the handful of axes of greatest spread, and describe each waveform by its
+position along them. Since the spikes of one neuron are near-copies, a couple of axes
+capture almost all the variation. Look at the **scree plot** — the fraction of variance
+each component explains:
 
 <details>
 <summary><b>▸ Go deeper: what PCA actually computes (optional)</b></summary>

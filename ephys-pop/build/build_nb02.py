@@ -282,18 +282,60 @@ print("median across channels after  CAR:", np.median(np.abs(np.median(filt, axi
 """,
     ),
     md(r"""
-## 6. Whitening
+## 6. Variance, covariance, and correlated noise
 
-One nuisance remains, and it's the subtle one. The background noise is **spatially
-correlated**: nearby channels tend to wiggle together. Look at the **noise
-covariance** — a grid showing how much each pair of channels moves together. Bright
-means "these two channels are correlated." There's an obvious bright band along the
-diagonal, meaning neighbours are correlated.
+One nuisance remains, and it's the subtle one — but to see it we first need two
+everyday statistics.
+
+**Variance** measures how much a signal *wiggles* around its average: small variance =
+nearly flat, large variance = big swings. Its square root is the **standard deviation**
+$\sigma$ — the typical size of a wiggle, and the very "sigma" we'll set a detection
+threshold in (Notebook 3).
+
+**Covariance** compares *two* channels: when channel A is above its own average, does
+channel B tend to be above its average too? If so they **co-vary** (positive
+covariance); if they're unrelated their covariance is about zero. The clearest way to
+see it is to scatter one channel's voltage against another's, sample by sample:
+""",),
+    code(r"""
+rng = np.random.default_rng(0)
+idx = rng.integers(0, len(filt), 4000)          # a random handful of time samples
+ch, neighbour, far = 15, 16, 3
+fig, ax = plt.subplots(1, 2, figsize=(9, 4.2))
+ax[0].scatter(filt[idx, ch], filt[idx, neighbour], s=4, alpha=0.3)
+ax[0].set_title(f"ch {ch} vs neighbour ch {neighbour}\n(tilted cloud → they co-vary)")
+ax[1].scatter(filt[idx, ch], filt[idx, far], s=4, alpha=0.3)
+ax[1].set_title(f"ch {ch} vs far ch {far}\n(round cloud → independent)")
+for a in ax:
+    a.set_xlabel("voltage (µV)"); a.set_ylabel("voltage (µV)"); a.set_aspect("equal")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+The neighbouring channels make a **tilted** cloud — high on one tends to mean high on
+the other, because they pick up much of the same noise. The far-apart channels make a
+**round** cloud — knowing one tells you nothing about the other. That tilt *is*
+covariance, made visible.
+
+Now measure it for **every pair of channels at once** and collect the answers in a
+grid: the **covariance matrix**. Entry $(i, j)$ is the covariance of channel $i$ with
+channel $j$; the diagonal is each channel's own variance. Bright entries just off the
+diagonal are exactly the neighbour-correlations we just saw.
 """,),
     code(r"""
 cov = ps.noise_covariance(filt)
-ps.plotting.plot_covariance(cov, title="noise covariance (before whitening)")
+ps.plotting.plot_covariance(cov, title="noise covariance matrix (before whitening)")
 plt.show()
+""",),
+    md(r"""
+The bright band hugging the diagonal is the spatial correlation of the noise.
+
+> **Worth planting for Notebook 4.** A *tilted* cloud has a natural **long axis** — the
+> direction it spreads most — and a short axis at right angles. Those axes, and how far
+> the cloud stretches along each, are exactly what the covariance matrix encodes.
+> Whitening (next) uses them to *round the cloud out*; **PCA** in Notebook 4 uses the
+> very same axes to *summarise* a spike in a couple of numbers. Same maths, two uses.
+
+## 7. Whitening
 """,),
     md(r"""
 Correlated noise is a problem for detection: a fluctuation shared by five neighbouring

@@ -30,9 +30,10 @@ whitened, filtered, W = ps.preprocess(rec)
     md(r"""
 ## 1. A threshold in noise units
 
-After whitening, every channel has noise of roughly unit standard deviation, so we
-can set one threshold — say **5 sigma** — that means the same thing everywhere. We
-estimate each channel's noise robustly with the **median absolute deviation** (the
+After whitening, every channel has noise of roughly the same **standard deviation**
+$\sigma$ — the typical wiggle size we met in Notebook 2. So we can set one threshold in
+units of $\sigma$ — say **5 sigma** — that means the same thing on every channel. We
+estimate each channel's $\sigma$ robustly with the **median absolute deviation** (the
 MAD, which a few big spikes can't inflate) and mark every trough that dips below
 $-5\sigma$.
 

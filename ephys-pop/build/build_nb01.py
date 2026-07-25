@@ -111,9 +111,10 @@ print(f"peak channel: {pc}  (at depth {probe.y[pc]:.0f} µm; unit truly at {unit
 ## 3. A full recording
 
 Now the real thing. `make_recording` scatters several units at random depths, draws
-a **Poisson spike train** for each, superposes their templates into the traces, and
-buries everything in **spatially correlated noise** plus a slow **common-mode**
-fluctuation (both of which we'll clean up in Notebook 2). It hands back the traces
+a **Poisson spike train** for each — spikes fired at random times at some average
+rate per second, the simplest stand-in for a real neuron's firing — superposes their
+templates into the traces, and buries everything in **spatially correlated noise**
+plus a slow **common-mode** fluctuation (both of which we'll clean up in Notebook 2). It hands back the traces
 *and* the ground truth: every spike time, every label, every template.
 
 <details>

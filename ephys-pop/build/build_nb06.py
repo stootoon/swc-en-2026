@@ -59,8 +59,39 @@ plt.show()
     md(r"""
 ## 2. The matched filter
 
-How well does template $j$ fit the trace at time $t$? Slide the template there and
-take the **inner product** with the trace window. The best-fitting amplitude is
+**How do you find a known shape hidden in a signal?** You **slide** a copy of it along
+and, at each position, measure how well the two line up — by multiplying them
+point-by-point and adding up. That sum is the **dot product** (a *correlation*): it's
+large where the signal looks like the shape and small where it doesn't. Watch it locate
+a waveform dropped into pure noise:
+""",),
+    code(r"""
+rng = np.random.default_rng(0)
+shape = templates[0][ps.peak_channel(templates[0])]      # one template's peak-channel waveform
+L = len(shape)
+trace = rng.normal(0, shape.std() * 1.5, 1200)           # pure noise ...
+loc = 700
+trace[loc:loc + L] += shape                              # ... with the shape hidden at t=700
+
+corr = np.array([np.dot(trace[i:i + L], shape) for i in range(len(trace) - L)])
+
+fig, ax = plt.subplots(2, 1, figsize=(10, 4), sharex=True)
+ax[0].plot(trace, "k", lw=0.6); ax[0].axvline(loc, color="tab:red", ls="--")
+ax[0].set_title("a noisy trace with the shape hidden at the red line — can you see it?")
+ax[1].plot(corr, "tab:blue"); ax[1].axvline(loc, color="tab:red", ls="--")
+ax[1].set_title("the sliding correlation peaks exactly where the shape sits")
+ax[1].set_xlabel("position"); plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Even though the shape is invisible to the eye in the raw trace, the sliding correlation
+spikes precisely where it sits. That sliding dot product **is** the matched filter, and
+it's how we find each unit's spikes: correlate the recording with a unit's template,
+and the peaks are its spike times.
+
+One refinement turns the raw correlation into an actual *amplitude* — how big a copy of
+the template fits. How well does template $j$ fit the trace at time $t$? Slide it there,
+take the **inner product** with the trace window, and normalise. The best-fitting
+amplitude is
 
 $$a \;=\; \frac{\langle \text{trace window},\ \text{template}_j\rangle}{\lVert \text{template}_j\rVert^2}.$$
 

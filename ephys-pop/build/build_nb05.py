@@ -39,7 +39,37 @@ times, depth, amplitude = times[keep], parts["depth"][keep], parts["amplitude"][
 print(f"{len(times)} spikes kept for clustering")
 """,),
     md(r"""
-## 1. How many units? The BIC
+## 1. Clustering: fitting blobs to points
+
+**Clustering** means: given a pile of points with no labels, discover the groups. Our
+tool is the **Gaussian mixture**. It models each group as a **Gaussian** — a blob of
+points scattered around a centre, densest in the middle and thinning out with distance
+(a 2-D bell curve). A *mixture* is simply several such blobs. Fitting one to the data
+finds each blob's centre and shape, and for every point the blob it most likely came
+from. Here it is on a toy with three blobs:
+""",),
+    code(r"""
+from sklearn.mixture import GaussianMixture
+
+rng = np.random.default_rng(0)
+centres = np.array([[0, 0], [5, 4], [8, -1]])
+toy = np.vstack([rng.normal(c, 0.8, size=(120, 2)) for c in centres])
+assignment = GaussianMixture(n_components=3, random_state=0).fit_predict(toy)
+
+plt.figure(figsize=(5, 4))
+for g in range(3):
+    m = assignment == g
+    plt.scatter(toy[m, 0], toy[m, 1], s=12, color=ps.plotting.unit_color(g))
+plt.title("a Gaussian mixture recovers the three blobs")
+plt.xlabel("feature 1"); plt.ylabel("feature 2"); plt.show()
+""",),
+    md(r"""
+The mixture coloured the three groups correctly, with no labels to learn from. Our
+spikes are just such a pile of points — in the **depth–amplitude feature space** from
+Notebook 4 — and each neuron is a blob. Two questions remain: *how many* blobs are
+there, and *where does each spike belong?*
+
+## 2. How many units? The BIC
 
 Clustering needs to know how many clusters to look for, and we don't — that's part of
 what we're trying to discover. One principled answer: fit a **Gaussian mixture** for
@@ -116,7 +146,7 @@ plt.legend(); plt.title("BIC has an elbow at the true unit count"); plt.show()
 """,
     ),
     md(r"""
-## 2. Cluster with a Gaussian mixture
+## 3. Cluster with a Gaussian mixture
 
 With $k = 6$, fit a **Gaussian mixture**: it models each unit as an ellipse in
 feature space and assigns every spike to the most likely one. (A Gaussian mixture
@@ -161,7 +191,7 @@ The **t-SNE** plot is a QC tool: it squashes the feature space to 2-D so you can
 eyeball whether the clusters are genuinely separate blobs (good) or smeared into each
 other (a warning). Here they're clean, well-isolated islands.
 
-## 3. From clusters to templates
+## 4. From clusters to templates
 
 A **template** is the average of a cluster's snippets — the same noise-averages-away
 trick from Notebook 1, but now with clusters we *discovered* instead of labels we
@@ -198,7 +228,7 @@ plt.show()
 """,
     ),
     md(r"""
-## 4. Did we recover the real units?
+## 5. Did we recover the real units?
 
 Because this is synthetic data, we can check. Match each learned template to the
 true template it most resembles and compare their shapes — they should be nearly
