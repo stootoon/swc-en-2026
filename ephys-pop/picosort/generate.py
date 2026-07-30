@@ -131,14 +131,19 @@ def _correlated_noise(rng, n_samples, probe, noise_sd, noise_space_constant):
 
 
 def _common_mode(rng, n_samples, fs, amplitude):
-    """A slow LFP-like signal shared across all channels (removed by high-pass)."""
-    t = np.arange(n_samples) / fs
-    signal = np.zeros(n_samples)
-    for _ in range(3):
-        freq = rng.uniform(1.0, 8.0)
-        phase = rng.uniform(0, 2 * np.pi)
-        signal += np.sin(2 * np.pi * freq * t + phase)
-    return amplitude * signal
+    """A slow 1/f-like drift/LFP shared across all channels.
+
+    Real drift and local field potential have a ``1/f`` spectrum -- lots of power at
+    low frequencies falling off with frequency -- which is the low-frequency
+    "mountain" seen in a channel's power spectrum. High-pass filtering removes it.
+    """
+    white = rng.standard_normal(n_samples)
+    spectrum = np.fft.rfft(white)
+    freqs = np.fft.rfftfreq(n_samples, 1.0 / fs)
+    freqs[0] = freqs[1]                              # avoid divide-by-zero at DC
+    spectrum = spectrum / freqs                      # 1/f amplitude -> ~1/f^2 power
+    drift = np.fft.irfft(spectrum, n=n_samples)
+    return amplitude * drift / drift.std()
 
 
 def footprint(template: np.ndarray) -> np.ndarray:
@@ -167,7 +172,7 @@ def make_recording(n_units: int = 6, duration_s: float = 20.0, fs: float = FS,
                    n_channels: int = 32, pitch: float = 20.0,
                    rate_range=(1.5, 5.0), amplitude_range=(90.0, 200.0),
                    noise_sd: float = 12.0, space_constant: float = 25.0,
-                   noise_space_constant: float = 30.0, common_mode: float = 8.0,
+                   noise_space_constant: float = 30.0, common_mode: float = 60.0,
                    common_broadband: float = 10.0, seed: int = 0) -> Recording:
     """Generate a synthetic recording with full ground truth.
 
