@@ -138,13 +138,28 @@ def plot_traces(recording, channels=None, t0=0.0, t1=0.05, spacing=None,
                        title=f"raw voltage, {t0*1e3:.0f}–{t1*1e3:.0f} ms")
 
 
-def plot_covariance(cov, ax=None, title="channel covariance"):
-    """Heatmap of a channel-by-channel covariance (or correlation) matrix."""
+def plot_covariance(cov, ax=None, title="channel covariance", labels=None,
+                    annotate=False):
+    """Heatmap of a channel-by-channel covariance (or correlation) matrix.
+
+    ``labels`` sets the tick labels; ``annotate=True`` writes each entry's value in
+    its cell (for small matrices like the 2x2 case).
+    """
     if ax is None:
         _, ax = plt.subplots(figsize=(4, 3.4))
     vmax = np.abs(cov).max()
     im = ax.imshow(cov, cmap="RdBu_r", vmin=-vmax, vmax=vmax)
-    ax.set_xlabel("channel"); ax.set_ylabel("channel"); ax.set_title(title)
+    ax.set_title(title)
+    if labels is not None:
+        ax.set_xticks(range(len(labels))); ax.set_xticklabels(labels)
+        ax.set_yticks(range(len(labels))); ax.set_yticklabels(labels)
+    else:
+        ax.set_xlabel("channel"); ax.set_ylabel("channel")
+    if annotate:
+        for i in range(cov.shape[0]):
+            for j in range(cov.shape[1]):
+                ax.text(j, i, f"{cov[i, j]:.0f}", ha="center", va="center", fontsize=11,
+                        color="white" if abs(cov[i, j]) > vmax * 0.6 else "black")
     plt.colorbar(im, ax=ax, fraction=0.046)
     return ax
 

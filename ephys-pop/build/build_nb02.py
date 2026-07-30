@@ -466,14 +466,21 @@ for a, xy, other, label in [(ax[0], xy_near, neighbour, "neighbour"), (ax[1], xy
 ax[0].text(0.05, 0.9, "tilted → they co-vary", transform=ax[0].transAxes, color="tab:red")
 ax[1].text(0.05, 0.9, "round → independent", transform=ax[1].transAxes, color="tab:red")
 plt.tight_layout(); plt.show()
-
-print("2×2 covariance matrix — ch 15 & neighbour ch 16:")
-print(np.cov(xy_near.T).round(0))
-print("\n2×2 covariance matrix — ch 15 & far ch 3:")
-print(np.cov(xy_far.T).round(0))
 """,),
     md(r"""
-Read the matrix against the picture. Each $2\times2$ covariance matrix is
+Each cloud is summarised by a small **2×2 covariance matrix**. Let's plot them as
+heatmaps — the *exact* picture we'll use for all 32 channels in a moment, just tiny:
+""",),
+    code(r"""
+fig, ax = plt.subplots(1, 2, figsize=(8.5, 3.6))
+ps.plotting.plot_covariance(np.cov(xy_near.T), ax=ax[0], annotate=True,
+                            labels=["ch 15", "ch 16"], title="neighbours — they co-vary")
+ps.plotting.plot_covariance(np.cov(xy_far.T), ax=ax[1], annotate=True,
+                            labels=["ch 15", "ch 3"], title="far apart — independent")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Read each matrix against its cloud. A $2\times2$ covariance matrix is
 $\begin{pmatrix}\text{var}(A) & \text{cov}(A,B)\\ \text{cov}(A,B) & \text{var}(B)\end{pmatrix}$:
 
 - the **diagonal** entries are the two channels' **variances** — how far the cloud
@@ -532,6 +539,41 @@ sabotages that logic:
 - **Muddled amplitudes.** When we later measure a spike's size across channels to
   locate it, shared noise adds the *same* wobble to neighbouring channels at once,
   biasing the spatial footprint we use to localise and cluster it.
+
+Here's that first failure mode — **false alarms** — in action. Below are two patches of
+*pure noise* (no spikes at all) with the same per-channel size: one spatially
+correlated like our recording, one independent. We run a naive detector — "flag any
+moment where 5+ channels dip below the threshold at once," the multi-channel test
+that's *supposed* to catch spikes — and mark every hit in red.
+""",),
+    code(r"""
+n_ch, n_time = 12, 6000
+rng = np.random.default_rng(3)
+shared = rng.standard_normal((n_time, 1))                       # one noise source ...
+correlated = 2.0 * shared + rng.standard_normal((n_time, n_ch)) # ... shared by all channels
+independent = rng.standard_normal((n_time, n_ch))               # vs fully independent noise
+correlated /= correlated.std(0); independent /= independent.std(0)   # same per-channel size
+
+def multichannel_hits(x, thr=2.5, k=5):
+    return (x < -thr).sum(axis=1) >= k        # >= k channels below -thr at the same instant
+
+win = slice(0, 1200)
+fig, ax = plt.subplots(1, 2, figsize=(12, 4.6), sharey=True)
+for a, x, name in [(ax[0], correlated, "correlated"), (ax[1], independent, "independent")]:
+    hits = multichannel_hits(x)
+    for c in range(n_ch):
+        a.plot(np.arange(win.start, win.stop), x[win, c] + c * 7, color="k", lw=0.5)
+    for h in np.where(hits[win])[0]:
+        a.axvline(h + win.start, color="tab:red", alpha=0.4)
+    a.set_title(f"{name} noise — {hits.sum()} phantom multi-channel 'spikes'")
+    a.set_xlabel("sample"); a.set_yticks([])
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+The correlated noise is riddled with red — moment after moment where a chunk of
+channels dips together purely by chance, each one a *phantom spike* a naive detector
+would report. The independent noise has almost none. That gap is the whole problem, and
+it's exactly what whitening removes.
 
 **Whitening** removes the shared component, leaving each channel's leftover noise
 independent — so a multi-channel coincidence once again means what we want it to: a
