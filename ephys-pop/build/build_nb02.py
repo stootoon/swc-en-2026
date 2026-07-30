@@ -19,13 +19,14 @@ tools**.
 | shared artefact | a fast signal identical on every channel (movement, reference) | **common average reference** |
 | correlated noise | nearby channels share noise, so a threshold means different things on different channels | **whitening** |
 
-The first tool, **filtering**, works in the language of *frequency* — so we'll start
-by building that language up from scratch, then use it. By the end you will have:
+The first tool, **filtering**, works in the language of *frequency*, and the third,
+**whitening**, in the language of *covariance* — so we'll build both those languages up
+from scratch before using them. By the end you will have:
 
 1. seen a signal as a mix of **frequencies** (the Fourier view and the power spectrum),
 2. understood what a **filter** does, and what a **Butterworth** filter is,
 3. **high-pass filtered** the recording, **common-average-referenced** it, and
-   **whitened** it.
+   **whitened** it — with a geometric picture of what whitening actually does.
 """,),
     code(r"""
 import numpy as np
@@ -91,9 +92,9 @@ corresponds to $k\,f_s/N$ hertz, and the **power spectrum** is $|X_k|^2$ — exa
 returning just the non-negative frequencies.)
 </details>
 
-**Exercise 1** *(~4 min · easy)*. Complete `power_spectrum`: use `np.fft.rfft` to get the
-frequency content and `np.fft.rfftfreq` for the matching frequency axis; power is the
-squared magnitude `np.abs(...)**2`.
+**Exercise 1** *(~4 min · easy)*. Complete `power_spectrum` so it returns the frequency axis
+and the power at each frequency. You'll need to transform `x` into the frequency domain
+and take the squared magnitude.
 
 > **Check / unstuck.** You should see three sharp peaks, at **4, 40, and 200 Hz** —
 > exactly the waves we added. Stuck? the frequencies are `np.fft.rfftfreq(len(x), 1/fs)`
@@ -117,8 +118,8 @@ plt.title("power spectrum: one peak per ingredient"); plt.show()
 """,
         student=r"""
 def power_spectrum(x, fs):
-    # YOUR CODE HERE: spectrum = np.fft.rfft(x); freqs = np.fft.rfftfreq(len(x), 1/fs);
-    # power = np.abs(spectrum)**2. Return freqs, power.
+    # YOUR CODE HERE: return (freqs, power) -- the frequency axis, and how much energy
+    # sits at each frequency (the squared magnitude of x's frequency content).
     raise NotImplementedError
 
 f, p = power_spectrum(signal, fs_demo)
@@ -132,29 +133,72 @@ plt.title("power spectrum: one peak per ingredient"); plt.show()
     ),
     md(r"""
 Three peaks, at exactly the three frequencies we put in. That's the power spectrum's
-job: it reveals the hidden frequency ingredients of any signal. A real neural
-recording has a spectrum too — lots of power at low frequencies (the slow drift and
-LFP) and a broad spread at high frequencies where the spikes live.
+job: it reveals the hidden frequency ingredients of any signal.
+
+### What does a *real* recording look like?
+
+Now the same view, on one channel of our actual recording. (`welch` below is just a
+smoothed power spectrum — the same idea as Exercise 1, averaged over short windows to
+tame the noise.)
+""",),
+    code(r"""
+from scipy.signal import welch
+
+f_real, p_real = welch(raw[:, 10], fs=rec.fs, nperseg=4096)
+plt.figure(figsize=(8, 3.6))
+plt.semilogy(f_real, p_real, color="k")
+plt.axvspan(0, 300, color="tab:red", alpha=0.10)
+plt.text(150, p_real.max() * 0.3, "low-frequency\nMOUNTAIN\n(drift + LFP)",
+         ha="center", fontsize=9, color="tab:red")
+plt.text(1500, p_real.max() * 1e-4, "high-frequency plateau\n(where spikes live)",
+         ha="center", fontsize=9, color="tab:blue")
+plt.xlim(0, 3000); plt.xlabel("frequency (Hz)"); plt.ylabel("power (log scale)")
+plt.title("a real channel's power spectrum"); plt.show()
+""",),
+    md(r"""
+Two features stand out (the y-axis is logarithmic, so each gridline is 10× the one
+below). At **low frequencies** there's a huge **mountain** of power — the slow
+**drift** and **local field potential (LFP)**, the shared background swings of the
+tissue. At **higher frequencies** there's a much lower, broad **plateau** — this is
+where the **spikes** live, because a spike is a fast event and its energy is spread
+across high frequencies. Our whole job in this section: **keep the plateau, throw away
+the mountain.** The tool for "keep some frequencies, remove others" is a *filter*.
 
 ## 2. Filtering: keep some frequencies, remove others
 
-Once you can see a signal as a set of frequencies, **filtering** is the natural next
-move: keep the frequencies you want and remove the ones you don't.
-
-- a **low-pass** filter keeps *low* frequencies (slow waves) and removes high ones,
-- a **high-pass** filter keeps *high* frequencies (fast wiggles) and removes low ones,
-- a **band-pass** filter keeps a middle band.
-
-Watch what each does to our three-ingredient signal. A **high-pass** at 100 Hz should
-throw away the 4 Hz and 40 Hz waves and keep only the fast 200 Hz one; a **low-pass**
-at 100 Hz should do the opposite.
+A **filter** passes some frequencies and blocks others. The frequency where it
+switches over is its **cutoff frequency**. There are three basic shapes — here is the
+**frequency response** of each (the gain it applies at each frequency: 1 = kept,
+0 = removed), with the cutoff(s) marked:
 """,),
     code(r"""
-from scipy.signal import butter, filtfilt
+from scipy.signal import butter, freqz
+
+fig, ax = plt.subplots(1, 3, figsize=(12, 3), sharey=True)
+specs = [("low", 100, "low-pass\n(keep below cutoff)"),
+         ("high", 100, "high-pass\n(keep above cutoff)"),
+         ("band", [80, 200], "band-pass\n(keep a middle band)")]
+for a, (kind, cut, title) in zip(ax, specs):
+    num, den = butter(4, np.array(cut) / (fs_demo / 2), btype=kind)
+    w, h = freqz(num, den, worN=2000, fs=fs_demo)
+    a.plot(w, np.abs(h)); a.fill_between(w, np.abs(h), alpha=0.15)
+    for c in np.atleast_1d(cut):
+        a.axvline(c, color="k", ls="--", lw=0.8)
+    a.set_title(title); a.set_xlim(0, 400); a.set_xlabel("frequency (Hz)")
+ax[0].set_ylabel("gain (1 = kept, 0 = removed)")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Now watch a filter actually do this to our three-ingredient signal. A **high-pass** at
+100 Hz should throw away the 4 Hz and 40 Hz waves and keep only the fast 200 Hz one; a
+**low-pass** at 100 Hz should do the opposite.
+""",),
+    code(r"""
+from scipy.signal import filtfilt
 
 def apply_filter(x, fs, cutoff, kind):
-    b, a = butter(4, cutoff / (fs / 2), btype=kind)
-    return filtfilt(b, a, x)
+    num, den = butter(4, cutoff / (fs / 2), btype=kind)
+    return filtfilt(num, den, x)
 
 hp = apply_filter(signal, fs_demo, 100, "high")   # keep fast
 lp = apply_filter(signal, fs_demo, 100, "low")    # keep slow
@@ -166,42 +210,49 @@ ax[2].plot(t, lp, "tab:blue"); ax[2].set_title("low-pass at 100 Hz → only the 
 ax[2].set_xlabel("time (s)"); plt.tight_layout(); plt.show()
 """,),
     md(r"""
-Exactly as advertised: the high-pass output is a clean 200 Hz wiggle (the slow waves
-are gone), and the low-pass output is the slow rolling wave (the fast wiggle is gone).
-Filtering let us *pull apart* components that were added together — which is precisely
-what we need, because spikes and drift live at different frequencies.
+Exactly as advertised. Filtering let us *pull apart* components that were added
+together — which is precisely what we need, because spikes and drift live at different
+frequencies.
 
-## 3. What is a Butterworth filter?
+## 3. The Butterworth filter
 
-We asked for a "high-pass at 100 Hz", but a real filter can't switch instantly from
-"keep" to "remove" at exactly 100 Hz — that ideal brick wall is impossible. Every
-practical filter has a smooth transition, and different **filter designs** make
-different trade-offs. The **Butterworth** filter is the standard workhorse: it is
-*maximally flat* in the band it keeps (so it doesn't distort those frequencies), at
-the cost of a gently sloping transition.
+The responses above weren't perfect brick walls — they sloped through the cutoff
+rather than switching instantly. That's unavoidable, and different **filter designs**
+slope differently. The **Butterworth** is the standard workhorse: *maximally flat* in
+the band it keeps (it doesn't distort those frequencies), at the cost of a gentle
+transition. Two dials control it: the **cutoff frequency** and the **order** (how
+*sharply* it switches).
 
-Two dials control it: the **cutoff frequency** (where it switches from keep to
-remove) and the **order** (how *sharply* it makes that switch). The picture below is
-a filter's **frequency response** — the gain (0 = block, 1 = pass) it applies at each
-frequency. Higher order = steeper cliff at the cutoff.
+To read filter responses properly we need one more idea: the **decibel (dB)**, a
+logarithmic way to write gain. It's defined as $\text{dB} = 20\log_{10}(\text{gain})$,
+so gain 1 (fully kept) is **0 dB**, gain $\tfrac12$ is about $-6$ dB, and gain
+$1/\sqrt2 \approx 0.707$ is about $-3$ dB. Why bother? On a linear axis a gain of
+0.001 and 0.00001 both look like flat zero; in dB they're $-60$ and $-100$, clearly
+different — so dB lets us *see* deep into the stopband. Here is the same Butterworth
+high-pass on both scales:
 """,),
     code(r"""
-from scipy.signal import freqz
-
-plt.figure(figsize=(7, 3.6))
+fig, ax = plt.subplots(1, 2, figsize=(11, 3.6))
 for order in (1, 3, 8):
-    b, a = butter(order, 100 / (fs_demo / 2), btype="high")
-    w, h = freqz(b, a, worN=4000, fs=fs_demo)
-    plt.plot(w, np.abs(h), label=f"order {order}")
-plt.axvline(100, color="k", ls="--", lw=0.8, label="cutoff (100 Hz)")
-plt.xlim(0, 400); plt.xlabel("frequency (Hz)"); plt.ylabel("gain (0–1)")
-plt.title("Butterworth high-pass: higher order → sharper cutoff"); plt.legend(); plt.show()
+    num, den = butter(order, 100 / (fs_demo / 2), btype="high")
+    w, h = freqz(num, den, worN=4000, fs=fs_demo)
+    gain = np.abs(h)
+    ax[0].plot(w, gain, label=f"order {order}")
+    ax[1].plot(w, 20 * np.log10(gain + 1e-12), label=f"order {order}")
+ax[0].set_title("gain — linear scale"); ax[0].set_ylabel("gain (0–1)")
+ax[1].set_title("gain — dB scale"); ax[1].set_ylabel("dB"); ax[1].set_ylim(-80, 5)
+ax[1].axhline(-3, color="0.6", ls=":", lw=1)                # the -3 dB point
+for a in ax:
+    a.axvline(100, color="k", ls="--", lw=0.8); a.set_xlim(0, 400); a.set_xlabel("frequency (Hz)")
+ax[0].legend(); plt.tight_layout(); plt.show()
 """,),
     md(r"""
-Below the cutoff the gain is near 0 (those frequencies are removed); above it the gain
-is near 1 (kept). A low order rolls off gently; a high order approaches the ideal
-brick wall but can introduce other artefacts, so a **middle order (3–4) is the usual
-choice** — flat where it matters, sharp enough, well-behaved. That's what we'll use.
+On the **linear** plot (left) the curves rise from 0 to 1 through the cutoff; higher
+order = steeper. On the **dB** plot (right) you can see how deeply each one kills the
+low frequencies — the order-8 filter drops far below $-60$ dB, invisible on the linear
+axis. All curves pass through $-3$ dB (gain $1/\sqrt2$) at the cutoff; that's the
+conventional definition of "the cutoff frequency." A **middle order (3–4)** is the
+usual choice — sharp enough, without the ringing a very high order can add.
 
 <details>
 <summary><b>▸ Go deeper: the Butterworth response equation (optional)</b></summary>
@@ -212,48 +263,84 @@ $f_c$ has squared gain (low-pass form)
 $$|H(f)|^2 \;=\; \frac{1}{1 + (f/f_c)^{2n}}.$$
 
 Read off the behaviour: at $f = f_c$ the denominator is $2$, so the gain is
-$1/\sqrt{2} \approx 0.707$ **for every order** — that's the $-3$ dB point where all the
-curves crossed. As $n$ grows, $(f/f_c)^{2n}$ flips from $\approx 0$ to $\gg 1$ ever
-more abruptly around $f_c$, sharpening the transition toward the ideal brick wall. And
-"maximally flat" is precise: this $|H|^2$ has the most possible derivatives equal to
-zero at $f=0$, so the passband is as ripple-free as any filter of that order can be.
-(The high-pass we actually use is the same with $f$ and $f_c$ swapped,
+$1/\sqrt{2} \approx 0.707$ — that's the $-3$ dB point, **for every order**. As $n$
+grows, $(f/f_c)^{2n}$ flips from $\approx 0$ to $\gg 1$ ever more abruptly around
+$f_c$, sharpening the transition. "Maximally flat" is precise: this $|H|^2$ has the
+most possible derivatives equal to zero at $f=0$, so the passband is as ripple-free as
+any filter of that order can be. (The high-pass is the same with $f$ and $f_c$ swapped,
 $|H|^2 = 1/(1+(f_c/f)^{2n})$.)
 </details>
 
 ## 4. High-pass the recording
 
-Now the real thing. In an extracellular recording the **spikes are fast** (their
-energy sits above a few hundred Hz) while the **drift and LFP are slow** (below).
-So a high-pass filter at **300 Hz** — the standard cutoff for the Neuropixels AP band
-— keeps the spikes and removes the slow stuff. Here's the power spectrum of one real
-channel before and after:
+Now the real thing. We met the recording's spectrum in section 1: a low-frequency
+**mountain** (drift + LFP) and a high-frequency **plateau** (spikes). A high-pass at
+**300 Hz** — the standard cutoff for the Neuropixels AP band — keeps the plateau and
+removes the mountain. First, in the **frequency** domain:
 """,),
     code(r"""
-from scipy.signal import welch
-
 filt_hp = ps.highpass_filter(raw, rec.fs, cutoff=300)
 
 f, praw = welch(raw[:, 10], fs=rec.fs, nperseg=4096)
 f, php = welch(filt_hp[:, 10], fs=rec.fs, nperseg=4096)
-plt.figure(figsize=(7, 3.6))
+plt.figure(figsize=(8, 3.6))
 plt.semilogy(f, praw, label="raw")
 plt.semilogy(f, php, label="high-passed")
 plt.axvline(300, color="k", ls="--", lw=0.8, label="300 Hz cutoff")
-plt.xlim(0, 2000); plt.xlabel("frequency (Hz)"); plt.ylabel("power")
-plt.legend(); plt.title("the recording loses its low-frequency mountain"); plt.show()
+plt.xlim(0, 2000); plt.xlabel("frequency (Hz)"); plt.ylabel("power (log scale)")
+plt.legend(); plt.title("high-pass removes the low-frequency mountain"); plt.show()
 """,),
     md(r"""
-(`welch` is just a smoothed power spectrum — the same idea as Exercise 1, averaged
-over short windows to reduce noise.) The huge low-frequency mountain — the drift and
-LFP — is gone, and the fast content where spikes live is untouched.
-
+Read this carefully: below 300 Hz the high-passed curve (orange) **plunges far down**.
+That is *not* a dip in the data — it's the low-frequency mountain being **removed**,
+its power pushed down to nearly nothing (the log axis reaches $10^{-11}$). Above
+300 Hz the two curves lie on top of each other: the spikes are left completely
+untouched. The same event in the **time** domain — the drifting baseline flattens out
+and the spikes stand clear:
+""",),
+    code(r"""
+i0, i1 = int(0.50 * rec.fs), int(0.58 * rec.fs)
+tt = np.arange(i0, i1) / rec.fs * 1e3
+fig, ax = plt.subplots(2, 1, figsize=(10, 4), sharex=True)
+ax[0].plot(tt, raw[i0:i1, 10], "k", lw=0.7); ax[0].set_title("raw channel 10 — wandering baseline")
+ax[1].plot(tt, filt_hp[i0:i1, 10], "tab:red", lw=0.7)
+ax[1].set_title("after high-pass — flat baseline, spikes stand out")
+ax[1].set_xlabel("time (ms)"); plt.tight_layout(); plt.show()
+""",),
+    md(r"""
 ## 5. Common average reference
 
 Some artefacts appear *identically* on every channel — a movement, a reference
 fluctuation. Because they're the same everywhere, we can estimate them by the
-**across-channel average** at each moment and subtract it. We use the **median**
-rather than the mean so that a big spike on one channel can't drag the reference.
+**across-channel average** at each moment and subtract it. But **which** average —
+the mean or the median? It matters, and here's why.
+""",),
+    md(r"""
+A big spike is huge on its own channel but absent on the others. If we use the
+**mean** as the reference, that one big value drags the average up, and subtracting it
+then stamps a faint upside-down copy of the spike onto *every other channel* — an
+artefact we just created. The **median** ignores the lone outlier, so it doesn't. See
+it on a toy of 8 channels of noise with one big spike on channel 0:
+""",),
+    code(r"""
+rng = np.random.default_rng(0)
+toy = rng.normal(0, 1.0, size=(300, 8))
+toy[150, 0] += 40                               # a big spike, on channel 0 only
+
+mean_ref = toy - toy.mean(axis=1, keepdims=True)      # reference = mean across channels
+median_ref = toy - np.median(toy, axis=1, keepdims=True)  # reference = median
+
+plt.figure(figsize=(9, 3.6))
+plt.plot(mean_ref[:, 3], color="tab:red", label="channel 3 after MEAN reference")
+plt.plot(median_ref[:, 3], color="tab:blue", label="channel 3 after MEDIAN reference")
+plt.axvline(150, color="0.7", ls="--")
+plt.title("channel 3 has no spike — yet the mean reference injects a fake dip; the median doesn't")
+plt.xlabel("sample"); plt.ylabel("value"); plt.legend(); plt.show()
+""",),
+    md(r"""
+Under the **mean** reference (red) channel 3 gets a spurious negative blip at exactly
+the moment channel 0 spiked — a ghost spike we'd then have to worry about. Under the
+**median** reference (blue) it stays flat. So we use the median.
 
 **Exercise 2** *(~3 min · easy)*. Complete `common_average_reference`: subtract the median
 across channels (axis 1) at every time sample.
@@ -273,7 +360,6 @@ print("median across channels after  CAR:", np.median(np.abs(np.median(filt, axi
         student=r"""
 def common_average_reference(traces):
     # YOUR CODE HERE: subtract the across-channel median at each time sample.
-    # Hint: np.median(traces, axis=1, keepdims=True)
     raise NotImplementedError
 
 filt = common_average_reference(filt_hp)
@@ -282,10 +368,10 @@ print("median across channels after  CAR:", np.median(np.abs(np.median(filt, axi
 """,
     ),
     md(r"""
-## 6. Variance, covariance, and correlated noise
+## 6. Variance, covariance, and the shape of noise
 
-One nuisance remains, and it's the subtle one — but to see it we first need two
-everyday statistics.
+One nuisance remains, the subtle one — but to see it we first need two everyday
+statistics.
 
 **Variance** measures how much a signal *wiggles* around its average: small variance =
 nearly flat, large variance = big swings. Its square root is the **standard deviation**
@@ -293,104 +379,132 @@ $\sigma$ — the typical size of a wiggle, and the very "sigma" we'll set a dete
 threshold in (Notebook 3).
 
 **Covariance** compares *two* channels: when channel A is above its own average, does
-channel B tend to be above its average too? If so they **co-vary** (positive
-covariance); if they're unrelated their covariance is about zero. The clearest way to
-see it is to scatter one channel's voltage against another's, sample by sample:
+channel B tend to be above its average too? If so they **co-vary**. The clearest way
+to see it is to scatter one channel's voltage against another's, sample by sample, and
+draw the **ellipse** that summarises the cloud's shape:
 """,),
     code(r"""
+from matplotlib.patches import Ellipse
+
+def draw_cov_ellipse(ax, xy, n_std=2.0, **kw):
+    # draw the ellipse describing the covariance of the 2-column data `xy`
+    C = np.cov(xy.T)
+    vals, vecs = np.linalg.eigh(C)                  # axis lengths^2 and axis directions
+    angle = np.degrees(np.arctan2(vecs[1, -1], vecs[0, -1]))
+    width, height = 2 * n_std * np.sqrt(vals[::-1])
+    ax.add_patch(Ellipse(xy.mean(0), width, height, angle=angle, fill=False, **kw))
+
 rng = np.random.default_rng(0)
-idx = rng.integers(0, len(filt), 4000)          # a random handful of time samples
+idx = rng.integers(0, len(filt), 4000)
 ch, neighbour, far = 15, 16, 3
-fig, ax = plt.subplots(1, 2, figsize=(9, 4.2))
-ax[0].scatter(filt[idx, ch], filt[idx, neighbour], s=4, alpha=0.3)
-ax[0].set_title(f"ch {ch} vs neighbour ch {neighbour}\n(tilted cloud → they co-vary)")
-ax[1].scatter(filt[idx, ch], filt[idx, far], s=4, alpha=0.3)
-ax[1].set_title(f"ch {ch} vs far ch {far}\n(round cloud → independent)")
-for a in ax:
-    a.set_xlabel("voltage (µV)"); a.set_ylabel("voltage (µV)"); a.set_aspect("equal")
+fig, ax = plt.subplots(1, 2, figsize=(9, 4.4))
+for a, other, label in [(ax[0], neighbour, "neighbour"), (ax[1], far, "far")]:
+    xy = np.column_stack([filt[idx, ch], filt[idx, other]])
+    a.scatter(xy[:, 0], xy[:, 1], s=4, alpha=0.25)
+    draw_cov_ellipse(a, xy, edgecolor="tab:red", lw=2)
+    a.set_title(f"ch {ch} vs {label} ch {other}"); a.set_aspect("equal")
+    a.set_xlabel("voltage (µV)"); a.set_ylabel("voltage (µV)")
+ax[0].text(0.05, 0.9, "tilted → they co-vary", transform=ax[0].transAxes, color="tab:red")
+ax[1].text(0.05, 0.9, "round → independent", transform=ax[1].transAxes, color="tab:red")
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
-The neighbouring channels make a **tilted** cloud — high on one tends to mean high on
-the other, because they pick up much of the same noise. The far-apart channels make a
-**round** cloud — knowing one tells you nothing about the other. That tilt *is*
-covariance, made visible.
+The ellipse *is* the covariance, drawn: for neighbouring channels it's **tilted and
+stretched** along a diagonal — high on one tends to mean high on the other, because
+they share much of the same noise. For far-apart channels it's a **round** blob —
+knowing one tells you nothing about the other.
 
-Now measure it for **every pair of channels at once** and collect the answers in a
+Now measure this for **every pair of channels at once** and collect the answers in a
 grid: the **covariance matrix**. Entry $(i, j)$ is the covariance of channel $i$ with
 channel $j$; the diagonal is each channel's own variance. Bright entries just off the
-diagonal are exactly the neighbour-correlations we just saw.
+diagonal are the neighbour-correlations we just saw.
 """,),
     code(r"""
 cov = ps.noise_covariance(filt)
-ps.plotting.plot_covariance(cov, title="noise covariance matrix (before whitening)")
+ps.plotting.plot_covariance(cov, title="noise covariance matrix")
 plt.show()
 """,),
     md(r"""
-The bright band hugging the diagonal is the spatial correlation of the noise.
+The bright band hugging the diagonal is the spatial correlation of the noise. That
+correlation is a problem for detection: a fluctuation shared by five neighbouring
+channels can masquerade as a big multi-channel event, and a threshold of "5 sigma"
+means different things on channels whose noise is entangled. **Whitening** fixes it —
+and it's easiest to *see* on the very cloud we just drew.
 
-> **Worth planting for Notebook 4.** A *tilted* cloud has a natural **long axis** — the
-> direction it spreads most — and a short axis at right angles. Those axes, and how far
-> the cloud stretches along each, are exactly what the covariance matrix encodes.
-> Whitening (next) uses them to *round the cloud out*; **PCA** in Notebook 4 uses the
-> very same axes to *summarise* a spike in a couple of numbers. Same maths, two uses.
+## 7. Whitening = decorrelate, then equalise
 
-## 7. Whitening
+Whitening turns that **tilted** noise cloud into a **round** one, in two geometric
+steps. Watch it happen on the two correlated channels from the last section:
+
+1. **Rotate to decorrelate.** Spin the cloud so its long and short axes line up with
+   the coordinate axes. In these new coordinates the two channels no longer co-vary —
+   the tilt is gone, leaving an *upright* ellipse.
+2. **Scale to equalise variance.** Stretch/squash each axis so the spread is the same
+   in every direction — the ellipse becomes a **circle**. Now the noise is equal in
+   all directions and uncorrelated: exactly "white."
+""",),
+    code(r"""
+xy = np.column_stack([filt[idx, ch], filt[idx, neighbour]])
+xy = xy - xy.mean(0)
+vals, vecs = np.linalg.eigh(np.cov(xy.T))     # vecs = the cloud's axes, vals = variance along each
+
+rotated = xy @ vecs                            # step 1: rotate onto the axes → decorrelated
+whitened_2d = rotated / np.sqrt(vals)          # step 2: scale each axis to variance 1 → whitened
+
+lim = np.abs(xy).max() * 1.1
+fig, ax = plt.subplots(1, 3, figsize=(12, 4.2))
+for a, data, title in zip(
+        ax, [xy, rotated, whitened_2d],
+        ["1. correlated (tilted)", "2. rotated → decorrelated (upright)", "3. scaled → whitened (round)"]):
+    a.scatter(data[:, 0], data[:, 1], s=4, alpha=0.25)
+    draw_cov_ellipse(a, data, edgecolor="tab:red", lw=2)
+    a.axhline(0, color="0.85", lw=0.6); a.axvline(0, color="0.85", lw=0.6)
+    a.set_aspect("equal"); a.set_title(title)
+ax[0].set_xlim(-lim, lim); ax[0].set_ylim(-lim, lim)
+plt.tight_layout(); plt.show()
 """,),
     md(r"""
-Correlated noise is a problem for detection: a fluctuation shared by five neighbouring
-channels can masquerade as a big multi-channel event, and a threshold of "5 sigma"
-then means different things on different channels. **Whitening** removes these
-correlations. It applies a linear transform that leaves each channel with equal
-variance and *zero* correlation to its neighbours — so afterwards the noise is
-spatially flat and a single threshold is meaningful everywhere.
+Tilted → upright → round. The **rotation** came from the covariance matrix's
+**eigenvectors** (the cloud's natural axes), and the **scaling** from its
+**eigenvalues** (the variance along each axis). Whitening the real data does exactly
+this, but for all 32 channels at once — one rotation and one rescaling in
+32-dimensional space, packaged into a single matrix $W$.
 
-The recipe: measure the noise covariance, then apply the transform that "divides it
-out." Concretely we use $W = C^{-1/2}$ (the matrix square root of the inverse
-covariance), which is the gentlest transform that flattens the correlations while
-keeping the channels in place.
+**Exercise 3** *(~7 min · meaty)*. Complete `whitening_matrix`. `np.linalg.eigh` hands you the
+axes (`vecs`) and the variances along them (`vals`); build the matrix that **rotates**
+onto the axes, **scales** each by $1/\sqrt{\text{variance}}$, and **rotates back** —
+that is `vecs @ diag(1/sqrt(vals)) @ vecs.T`. Then we apply it and confirm the
+covariance is now clean.
 
-**Exercise 3** *(~7 min · meaty)*. Complete `whitening_matrix`. The steps are given —
-eigen-decompose the covariance, then rescale each eigen-direction by
-$1/\sqrt{\text{eigenvalue}}$. Then we apply it and check the covariance is now clean.
-
-> **Check / unstuck.** After whitening, the covariance grid should be a bright
-> diagonal with near-zero (blank) off-diagonal. Stuck? Use `ps.whitening_matrix(cov)`.
+> **Check / unstuck.** After whitening, the covariance grid should be a bright diagonal
+> with near-zero (blank) off-diagonal. Stuck? Use `ps.whitening_matrix(cov)`.
 
 <details>
-<summary><b>▸ Go deeper: the whitening matrix, in symbols (optional)</b></summary>
+<summary><b>▸ Go deeper: the whitening matrix in symbols (optional)</b></summary>
 
-Write the noise across channels at one instant as a vector $n$ with covariance
-$C = \mathbb{E}[n\,n^{\top}]$ (the grid you just plotted). We want a linear map $W$ so
-the transformed noise $z = Wn$ has covariance equal to the identity — unit variance on
-every channel, zero correlation between them:
-
-$$\mathrm{Cov}(z) = \mathbb{E}[Wn\,n^{\top}W^{\top}] = W\,C\,W^{\top} = I.$$
-
-Because $C$ is symmetric it has an **eigen-decomposition** $C = V\Lambda V^{\top}$: the
-columns of $V$ are perpendicular eigen-directions and $\Lambda$ holds the noise
-variance along each. Taking the symmetric square root
+We want a matrix $W$ so the transformed noise $z = Wn$ has covariance equal to the
+identity — unit variance on every channel, zero correlation between them:
+$\mathrm{Cov}(z) = W\,C\,W^{\top} = I$. Eigen-decomposing the (symmetric) covariance,
+$C = V\Lambda V^{\top}$, the symmetric square root
 
 $$W = C^{-1/2} = V\,\Lambda^{-1/2}\,V^{\top}$$
 
-does the job, since $W C W^{\top} = V\Lambda^{-1/2}V^{\top}\,V\Lambda V^{\top}\,
-V\Lambda^{-1/2}V^{\top} = V\Lambda^{-1/2}\Lambda\Lambda^{-1/2}V^{\top} = VV^{\top} = I.$
-In words that's "**rotate** onto the eigen-axes ($V^{\top}$), **rescale** each to unit
-variance ($\Lambda^{-1/2}$), **rotate back** ($V$)" — which is what `np.linalg.eigh`
-plus the $1/\sqrt{\lambda}$ rescaling build. Any rotation of $W$ also whitens; this
-symmetric choice (**ZCA**) is the one closest to the identity, so channels stay in
-place. The $\epsilon$ floors tiny eigenvalues, since $1/\sqrt{\lambda}$ would otherwise
-explode along near-zero-variance directions.
-
-This connects forward to **Notebook 6**: the statistically optimal detector for a
-template $s$ in noise of covariance $C$ is $s^{\top}C^{-1}x$; whitening the data first
-turns that into a plain template match, getting the optimal detector for free.
+does it: $W C W^{\top} = V\Lambda^{-1/2}V^{\top}V\Lambda V^{\top}V\Lambda^{-1/2}V^{\top}
+= V\Lambda^{-1/2}\Lambda\Lambda^{-1/2}V^{\top} = VV^{\top} = I$. Read left to right,
+$V^{\top}$ is the **rotate onto the axes**, $\Lambda^{-1/2}$ is the **scale to unit
+variance**, and $V$ **rotates back** — the exact three moves the pictures showed, in
+32 dimensions. (Rotating back, rather than stopping after the scale, is the "ZCA"
+choice; it keeps channels in place instead of leaving the data spun into the
+eigenbasis. The $\epsilon$ in the code floors tiny eigenvalues, since $1/\sqrt{\lambda}$
+would explode along near-zero-variance directions.) This also connects to **Notebook
+6**: the optimal detector for a template $s$ in noise $C$ is $s^{\top}C^{-1}x$;
+whitening first turns that into a plain template match.
 </details>
 """,),
     code(
         solution=r"""
 def whitening_matrix(cov, eps=1e-6):
-    vals, vecs = np.linalg.eigh(cov)          # eigenvalues (variances) and directions
+    vals, vecs = np.linalg.eigh(cov)          # variances (vals) and axes (vecs)
     reg = eps * vals.max()                     # floor tiny eigenvalues
     return vecs @ np.diag(1.0 / np.sqrt(vals + reg)) @ vecs.T
 
@@ -407,10 +521,10 @@ print("mean |off-diagonal| after :", round(np.abs(cov_after - np.diag(np.diag(co
 """,
         student=r"""
 def whitening_matrix(cov, eps=1e-6):
-    vals, vecs = np.linalg.eigh(cov)          # eigenvalues (variances) and directions
+    vals, vecs = np.linalg.eigh(cov)          # variances (vals) and axes (vecs)
     reg = eps * vals.max()                     # floor tiny eigenvalues
-    # YOUR CODE HERE: rescale each eigen-direction by 1/sqrt(vals+reg) and rebuild:
-    # return vecs @ diag(1/sqrt(vals+reg)) @ vecs.T
+    # YOUR CODE HERE: rotate onto the axes, scale each by 1/sqrt(vals+reg), rotate back:
+    # vecs @ diag(1/sqrt(vals+reg)) @ vecs.T
     raise NotImplementedError
 
 W = whitening_matrix(cov)
@@ -429,13 +543,19 @@ print("mean |off-diagonal| after :", round(np.abs(cov_after - np.diag(np.diag(co
 The off-diagonal correlations collapse: whitened noise is spatially flat, so a
 detection threshold means the same thing on every channel.
 
+> **Worth planting for Notebook 4.** We just used the covariance's **eigenvectors and
+> eigenvalues** — the cloud's axes and how far it stretches along each. That exact
+> tool, applied to *spike shapes* instead of noise, is **PCA** (Notebook 4): whitening
+> uses the axes to round a cloud out; PCA uses them to summarise a spike in a couple of
+> numbers.
+
 ## Putting it together
 
 The whole pipeline — high-pass → CAR → whiten — is `ps.preprocess`. It returns two
 things we'll both use: the **whitened** traces (for *detecting* spikes, where a
-uniform threshold is what we want) and the **filtered** traces (high-passed and
-CAR'd but not whitened, in real microvolts, where a spike's spatial footprint is
-undistorted — the right place to *measure* waveforms and build templates).
+uniform threshold is what we want) and the **filtered** traces (high-passed and CAR'd
+but not whitened, in real microvolts, where a spike's spatial footprint is undistorted
+— the right place to *measure* waveforms and build templates).
 """,),
     code(r"""
 whitened, filtered, W = ps.preprocess(rec)
@@ -453,14 +573,15 @@ plt.show()
     md(r"""
 ## Wrap-up
 
-You learned to see a signal as a **mixture of frequencies** (the Fourier view and
-the power spectrum), what a **filter** does, and what a **Butterworth** filter is —
-then used all three ideas: high-pass killed the drift, CAR removed the shared
-artefact, and whitening flattened the spatial noise correlations. The traces are now
-clean enough that a spike is a sharp deflection standing clear of the noise.
+You learned to see a signal as a **mixture of frequencies** (the Fourier view and the
+power spectrum), what a **filter** and a **Butterworth** filter are (and how to read a
+response in **dB**), and what **variance** and **covariance** mean — then used them:
+high-pass killed the low-frequency mountain, the median-based CAR removed shared
+artefacts without injecting ghosts, and whitening rotated-and-scaled the noise cloud
+round so a threshold is meaningful everywhere.
 
-**Next (Notebook 3 — detection):** put a threshold on these whitened traces, find
-the crossings, and cut out a snippet around each detected spike.
+**Next (Notebook 3 — detection):** put a threshold on these whitened traces, find the
+crossings, and cut out a snippet around each detected spike.
 """,),
 ]
 
