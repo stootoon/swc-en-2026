@@ -103,10 +103,10 @@ $$\mathrm{BIC}(k) = -2\log \hat L \;+\; m_k \log n,$$
 
 with $m_k$ the number of free parameters and $n$ the number of spikes. It is a
 large-$n$ approximation (via **Laplace's method**) to $-2\log p(\text{data}\mid k)$,
-the *model evidence* — the same Bayesian quantity that decided "which strategies
-matter" in the behaviour module, here deciding "how many neurons are there." Extra
-clusters beyond the truth buy almost no likelihood but keep paying $\log n$ per
-parameter, so the curve flattens: the **elbow is the honest unit count.**
+the **model evidence** — the probability the data would arise under a $k$-unit model,
+with the parameters averaged out rather than fitted. Extra clusters beyond the truth
+buy almost no likelihood but keep paying $\log n$ per parameter, so the curve
+flattens: the **elbow is the honest unit count.**
 </details>
 
 **Exercise 1** *(~5 min)*. Compute the BIC curve over `k = 2..10` and read off the elbow.

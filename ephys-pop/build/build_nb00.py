@@ -54,7 +54,7 @@ pedagogical reason — you learn a method best when you can check it against a k
 answer. So every stage you build gets tested the same way: *did we recover the
 spikes we put in?* At the end we score picosort against the truth, exactly the thing
 you can never do on a real recording. That question — recover-the-truth — is the
-spine of the module, just as it was in the behaviour unit.
+spine of the whole module.
 
 The generator lives in a small backend package, **`picosort`** (imported as `ps`),
 which also holds a reference implementation of every stage — so any notebook runs on

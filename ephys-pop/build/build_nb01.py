@@ -40,8 +40,8 @@ neighbours.
 probe = ps.make_probe(n_channels=32, pitch=20.0)
 print(f"{probe.n_channels} channels spanning {probe.y.min():.0f}–{probe.y.max():.0f} µm")
 
-fig, ax = plt.subplots(figsize=(2.2, 6))
-ps.plotting.plot_probe(probe, ax=ax)
+# Drawn sideways: depth runs left-to-right, channel 0 (top of probe) at the left.
+ps.plotting.plot_probe(probe)
 plt.show()
 """,),
     md(r"""
@@ -112,10 +112,20 @@ print(f"peak channel: {pc}  (at depth {probe.y[pc]:.0f} µm; unit truly at {unit
 
 Now the real thing. `make_recording` scatters several units at random depths, draws
 a **Poisson spike train** for each — spikes fired at random times at some average
-rate per second, the simplest stand-in for a real neuron's firing — superposes their
-templates into the traces, and buries everything in **spatially correlated noise**
-plus a slow **common-mode** fluctuation (both of which we'll clean up in Notebook 2). It hands back the traces
-*and* the ground truth: every spike time, every label, every template.
+rate per second, the simplest stand-in for a real neuron's firing — and superposes
+their templates into the traces. Then it buries them in two kinds of background noise,
+both of which Notebook 2 is devoted to cleaning up:
+
+- **spatially correlated noise.** "Correlated" means "tends to move together";
+  "spatially" means "between nearby channels." Neighbouring sites sit in the same
+  patch of tissue and pick up overlapping electrical fields from far-off sources, so
+  when one channel's noise swings up its neighbours tend to swing up too. (Notebook 2
+  makes this precise and removes it.)
+- a slow **common-mode** fluctuation: a drifting signal shared by *every* channel at
+  once, like the tissue's local field potential.
+
+Finally it hands back the traces *and* the **ground truth** — every spike time, label,
+and template, the answers a real recording never gives you.
 
 <details>
 <summary><b>▸ Go deeper: the generative model the whole pipeline inverts (optional)</b></summary>
@@ -143,10 +153,47 @@ so we can grade the inversion exactly (NB8).
     code(r"""
 rec = ps.make_recording(n_units=6, duration_s=20.0, seed=0)
 gt = rec.ground_truth
-print(f"traces: {rec.traces.shape}  ({rec.duration_s:.0f} s at {rec.fs/1e3:.0f} kHz)")
-print(f"ground truth: {gt.n_units} units, {len(gt.spike_times)} spikes")
+""",),
+    md(r"""
+### The two objects you'll work with
+
+Almost everything in this module comes out of these two objects, so it's worth a
+moment to see what's inside them — you'll reach into them in the exercises.
+
+**`rec`** — a `Recording`, the data you'd have from a real probe:
+
+| attribute | what it is |
+|---|---|
+| `rec.traces` | the voltage: a `(n_samples, n_channels)` array |
+| `rec.fs` | the sampling rate (samples per second) |
+| `rec.probe` | the `Probe` from section 1 — `rec.probe.y` holds the channel depths |
+| `rec.duration_s` | the length of the recording, in seconds |
+
+**`gt = rec.ground_truth`** — a `GroundTruth`, the answers (a real recording never
+gives you these; we use them only to build intuition now and to *grade* the sort at
+the end):
+
+| attribute | what it is |
+|---|---|
+| `gt.spike_times` | the sample index of every spike, all units pooled together |
+| `gt.spike_labels` | which unit fired each of those spikes |
+| `gt.templates` | each unit's template: `(n_units, n_channels, n_samples)` |
+| `gt.unit_xy`, `gt.unit_amplitude` | each unit's position and peak amplitude |
+
+The key idiom you'll use often: **the spike times of one unit** are
+`gt.spike_times[gt.spike_labels == unit]`. Let's peek at a few values:
+""",),
+    code(r"""
+print(f"rec.traces: {rec.traces.shape}   rec.fs: {rec.fs/1e3:.0f} kHz   duration: {rec.duration_s:.0f} s")
+print(f"ground truth: {gt.n_units} units, {len(gt.spike_times)} spikes total")
+print("first 5 spike times :", gt.spike_times[:5])
+print("first 5 spike labels:", gt.spike_labels[:5], "(the unit that fired each)")
+print("spikes per unit     :", np.bincount(gt.spike_labels))
 print("true unit depths (µm):", np.round(np.sort(gt.unit_xy[:, 1])).astype(int))
-print("spikes per unit:", np.bincount(gt.spike_labels))
+
+# the idiom in action: pull unit 0's spike times
+unit0_times = gt.spike_times[gt.spike_labels == 0]
+print(f"\nunit 0 fired {len(unit0_times)} times; first few at samples {unit0_times[:3]}")
 """,),
     md(r"""
 Zoom in on a single spike from one unit, on the band of channels around it. The red

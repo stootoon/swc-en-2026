@@ -18,21 +18,36 @@ def unit_color(i):
     return plt.get_cmap(UNIT_CMAP)(i % 10)
 
 
-def plot_probe(probe, unit_xy=None, ax=None):
-    """Scatter the channel positions; optionally overlay true unit locations."""
+def plot_probe(probe, unit_xy=None, ax=None, orientation="horizontal"):
+    """Scatter the channel positions; optionally overlay true unit locations.
+
+    ``orientation="horizontal"`` lays the probe along the x-axis (depth left→right),
+    which reads far better on a page than a tall, thin vertical strip.
+    """
+    horizontal = orientation == "horizontal"
     if ax is None:
-        _, ax = plt.subplots(figsize=(2.4, 6))
-    ax.scatter(probe.x, probe.y, s=40, c="0.4", marker="s", label="channels")
-    for i, (xi, yi) in enumerate(zip(probe.x, probe.y)):
-        ax.text(xi - 6, yi, str(i), va="center", ha="right", fontsize=6, color="0.5")
+        _, ax = plt.subplots(figsize=(11, 2.4) if horizontal else (2.4, 6))
+    cx, cy = (probe.y, probe.x) if horizontal else (probe.x, probe.y)
+    ax.scatter(cx, cy, s=45, c="0.4", marker="s", label="channels")
+    for i in range(probe.n_channels):
+        if horizontal:
+            ax.text(probe.y[i], probe.x[i] - 7, str(i), va="top", ha="center",
+                    fontsize=6, color="0.5")
+        else:
+            ax.text(probe.x[i] - 6, probe.y[i], str(i), va="center", ha="right",
+                    fontsize=6, color="0.5")
     if unit_xy is not None:
         unit_xy = np.atleast_2d(unit_xy)
-        ax.scatter(unit_xy[:, 0], unit_xy[:, 1], s=90, marker="*",
-                   c="tab:red", zorder=3, label="true units")
+        ux, uy = (unit_xy[:, 1], unit_xy[:, 0] + 12) if horizontal else (unit_xy[:, 0], unit_xy[:, 1])
+        ax.scatter(ux, uy, s=110, marker="*", c="tab:red", zorder=3, label="true units")
         ax.legend(loc="upper right", fontsize=8)
-    ax.set_xlabel("x (µm)"); ax.set_ylabel("depth y (µm)")
     ax.set_title("probe geometry")
-    ax.invert_yaxis()
+    if horizontal:
+        ax.set_xlabel("depth along probe (µm)"); ax.set_ylabel("x (µm)")
+        ax.set_ylim(-25, 25)
+    else:
+        ax.set_xlabel("x (µm)"); ax.set_ylabel("depth y (µm)")
+        ax.invert_yaxis()
     return ax
 
 
