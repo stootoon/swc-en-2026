@@ -149,10 +149,15 @@ individual spikes blur into the noise):
 i = int(np.argmin(np.abs(times - int(0.90 * rec.fs))))
 t_spk, pc = times[i], peak_channels[i]
 lo = min(max(0, pc - 6), rec.n_channels - 13)
+
+# mark only detections whose PEAK channel is in this band, so every red line lands on a
+# spike we can actually see here (a detection peaking on an off-screen channel would look
+# like a false mark)
+in_band = (peak_channels >= lo) & (peak_channels < lo + 13)
 ps.plotting.plot_signal(whitened, rec.fs, channels=range(lo, lo + 13),
                         t0=(t_spk - 250) / rec.fs, t1=(t_spk + 250) / rec.fs,
-                        mark_spikes=times,
-                        title="a detected spike (red) on the whitened traces")
+                        mark_spikes=times[in_band],
+                        title="detected spikes (red) on the whitened traces")
 plt.show()
 """,),
     md(r"""
