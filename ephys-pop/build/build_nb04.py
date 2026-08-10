@@ -113,12 +113,13 @@ different from the others, in a single number.
 rng = np.random.default_rng(1)
 cloud = rng.normal(size=(400, 2)) @ np.array([[2.4, 1.3], [0.0, 0.7]])
 cloud = cloud - cloud.mean(0)
-U, S, Vt = np.linalg.svd(cloud, full_matrices=False)   # PCA: axes are the singular vectors
+from sklearn.decomposition import PCA
+pca = PCA(n_components=2).fit(cloud)          # PCA finds the cloud's principal axes
 
 plt.figure(figsize=(4.8, 4.8))
 plt.scatter(cloud[:, 0], cloud[:, 1], s=8, alpha=0.4)
 for k, color in zip(range(2), ["tab:red", "tab:orange"]):
-    v = Vt[k] * (S[k] / np.sqrt(len(cloud))) * 2
+    v = pca.components_[k] * np.sqrt(pca.explained_variance_[k]) * 2   # axis × 2 std
     plt.arrow(0, 0, v[0], v[1], color=color, width=0.06, length_includes_head=True)
     plt.text(v[0] * 1.15, v[1] * 1.15, f"PC{k+1}", color=color, fontweight="bold")
 plt.gca().set_aspect("equal"); plt.xlabel("feature 1"); plt.ylabel("feature 2")
@@ -154,14 +155,14 @@ so the principal directions are the **eigenvectors of the covariance**, and each
 one's variance is its **eigenvalue** $\lambda$. The second PC is the next eigenvector,
 and so on — orthogonal directions of decreasing variance.
 
-In practice we skip forming $C$ and take the **singular value decomposition**
-$X = U S V^\top$ directly: the columns of $V$ are the principal directions (the
-`components`), the **scores** are $XV = US$, and the variance explained by component
-$k$ is $s_k^2 / \sum_j s_j^2$ — the scree plot. Why a *few* components suffice is the
-**Eckart–Young theorem**: keeping the top $k$ gives the best possible rank-$k$
-approximation of $X$ (smallest reconstruction error). Because every spike of a neuron
-is nearly the same waveform, $X$ is close to low-rank, so 2–3 components rebuild it
-almost perfectly and the rest is noise.
+You don't compute any of this by hand — **`sklearn`'s `PCA`** finds those eigenvectors
+for you (via a numerically stable **singular value decomposition** internally) and
+returns the shape directions (`components_`) and each spike's **scores**. The variance
+explained by component $k$ is $\lambda_k / \sum_j \lambda_j$ — the scree plot. Why a
+*few* components suffice is the **Eckart–Young theorem**: keeping the top $k$ gives the
+best possible rank-$k$ approximation of the data (smallest reconstruction error).
+Because every spike of a neuron is nearly the same waveform, a couple of components
+rebuild it almost perfectly and the rest is noise.
 </details>
 """,),
     code(r"""
@@ -173,29 +174,29 @@ plt.xlabel("principal component"); plt.ylabel("variance explained")
 plt.title(f"first 2 PCs capture {ev[:2].sum():.0%} of waveform variation"); plt.show()
 """,),
     md(r"""
-**Exercise 2** *(~6 min)*. Complete `pca_scores`: centre the waveforms, take the SVD, and
-project onto the top `k` right-singular vectors (the principal components). Return the
-scores — each spike's `k` numbers.
+**Exercise 2** *(~3 min · easy)*. Complete `pca_scores` using **sklearn's `PCA`**: fit it with
+`k` components to the waveforms and return each spike's scores (its `k` numbers).
 
-> **Check / unstuck.** `scores` should be `(n_spikes, 2)`. Stuck? Use
-> `ps.pca_features(waveforms, 2)[0]`.
+> **Check / unstuck.** `scores` should be `(n_spikes, 2)`. Stuck? it's
+> `PCA(n_components=k).fit_transform(waveforms)`.
 """,),
     code(
         solution=r"""
+from sklearn.decomposition import PCA
+
 def pca_scores(waveforms, k=2):
-    X = waveforms - waveforms.mean(axis=0)
-    U, S, Vt = np.linalg.svd(X, full_matrices=False)
-    return X @ Vt[:k].T
+    return PCA(n_components=k).fit_transform(waveforms)
 
 scores = pca_scores(waveforms, 2)
 print("each of the", len(scores), "spikes is now just", scores.shape[1], "numbers instead of",
       waveforms.shape[1])
 """,
         student=r"""
+from sklearn.decomposition import PCA
+
 def pca_scores(waveforms, k=2):
-    X = waveforms - waveforms.mean(axis=0)
-    # YOUR CODE HERE: SVD of X (np.linalg.svd, full_matrices=False); project X onto
-    # the top-k right singular vectors Vt[:k] and return the (n_spikes, k) scores.
+    # YOUR CODE HERE: fit sklearn's PCA with k components to the waveforms and return
+    # the transformed scores (one row of k numbers per spike).
     raise NotImplementedError
 
 scores = pca_scores(waveforms, 2)
@@ -210,13 +211,14 @@ change each one controls. **(right)** every spike placed at its `(PC1, PC2)` —
 whole 61-sample waveform boiled down to two numbers.
 """,),
     code(r"""
-scores2, components, mean_wave = ps.pca_features(waveforms, 2)   # components = the shape modes
+pca = PCA(n_components=2).fit(waveforms)          # the same PCA as in the exercise
+components, mean_wave = pca.components_, pca.mean_  # shape modes and the average waveform
 tt = np.arange(waveforms.shape[1])
 
 fig, ax = plt.subplots(1, 2, figsize=(11, 4))
 # (left) what each PC means, as a shape: the mean waveform, nudged +/- along each PC
 for k, col in [(0, "tab:red"), (1, "tab:green")]:
-    step = 2 * scores2[:, k].std()
+    step = 2 * scores[:, k].std()
     ax[0].plot(tt, mean_wave + step * components[k], color=col, lw=1, label=f"mean + PC{k+1}")
     ax[0].plot(tt, mean_wave - step * components[k], color=col, lw=1, ls="--", label=f"mean − PC{k+1}")
 ax[0].plot(tt, mean_wave, "k", lw=2.5, label="mean waveform")
@@ -259,7 +261,7 @@ def one_unit(width, seed):
 snips = np.concatenate([one_unit(2.2, 1), one_unit(3.8, 2)])
 lab = np.r_[np.zeros(120), np.ones(120)].astype(int)
 _, amp2, dep2 = ps.localize(snips, probe)
-sc2 = ps.pca_features(ps.peak_waveforms(snips), 2)[0]
+sc2 = pca_scores(ps.peak_waveforms(snips), 2)     # the sklearn PCA from Exercise 2
 
 fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
 # (1) the actual waveforms -- the shape difference PCA will detect
