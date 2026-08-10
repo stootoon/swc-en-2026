@@ -173,7 +173,8 @@ def make_recording(n_units: int = 6, duration_s: float = 20.0, fs: float = FS,
                    rate_range=(1.5, 5.0), amplitude_range=(90.0, 200.0),
                    noise_sd: float = 12.0, space_constant: float = 25.0,
                    noise_space_constant: float = 30.0, common_mode: float = 60.0,
-                   common_broadband: float = 10.0, seed: int = 0) -> Recording:
+                   common_broadband: float = 10.0, refractory_ms: float = 1.5,
+                   seed: int = 0) -> Recording:
     """Generate a synthetic recording with full ground truth.
 
     Units are placed at random depths, each with its own firing rate, amplitude,
@@ -219,14 +220,24 @@ def make_recording(n_units: int = 6, duration_s: float = 20.0, fs: float = FS,
         for u in range(n_units)
     ])
 
-    # --- Poisson spike trains ---------------------------------------------- #
+    # --- spike trains: Poisson, thinned to enforce a refractory period ------ #
     rates = rng.uniform(*rate_range, n_units)
+    refr = int(refractory_ms * 1e-3 * fs)
     times_list, labels_list = [], []
     for u in range(n_units):
         n_sp = rng.poisson(rates[u] * duration_s)
-        t = rng.integers(half, n_samples - half - 1, size=n_sp)
+        t = np.sort(rng.integers(half, n_samples - half - 1, size=n_sp))
+        if refr > 0 and len(t) > 1:
+            keep = np.ones(len(t), dtype=bool)      # drop any spike within refr of the last kept one
+            last = t[0]
+            for i in range(1, len(t)):
+                if t[i] - last < refr:
+                    keep[i] = False
+                else:
+                    last = t[i]
+            t = t[keep]
         times_list.append(t)
-        labels_list.append(np.full(n_sp, u))
+        labels_list.append(np.full(len(t), u))
     spike_times = np.concatenate(times_list)
     spike_labels = np.concatenate(labels_list)
     order = np.argsort(spike_times)
