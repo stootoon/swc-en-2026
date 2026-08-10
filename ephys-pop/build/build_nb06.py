@@ -79,7 +79,8 @@ but first it needs a way to recognise a known shape inside a trace.
 **How do you find a known shape hidden in a signal?** You **slide** a copy of it along,
 and at each position measure how well the two line up — by multiplying them point by
 point and adding up. That sum is the **dot product** (a *correlation*): large where the
-signal looks like the shape, small where it doesn't. Let's build that up in four steps:
+signal looks like the shape, small where it doesn't. Here's the setup — a spike on its
+own, the same spike buried in noise, and the template we'll slide along:
 """,),
     code(r"""
 shape = tmplA[pc]                       # the shape we'll look for (neuron A's waveform)
@@ -91,31 +92,60 @@ rng = np.random.default_rng(1)
 clean = np.zeros(500); clean[start:start + Lw] = shape         # (1) the shape on its own
 noisy = clean + rng.normal(0, shape.std() * 1.3, 500)        # (2) buried in noise
 
-# (4) sliding correlation: raw[i] is the fit for a template STARTING at i; it peaks when
-# the template lines up, i.e. i = start. To plot it against the spike's *trough*
-# position (which is what the red line marks), shift the x-axis by `trough`.
-raw = np.array([np.dot(noisy[i:i + Lw], shape) / np.dot(shape, shape)
-                for i in range(len(noisy) - Lw)])
-corr_x = np.arange(len(raw)) + trough
-
-fig, ax = plt.subplots(4, 1, figsize=(9, 7.5))
-for a in (ax[0], ax[1], ax[3]):
+fig, ax = plt.subplots(3, 1, figsize=(9, 5.5))
+for a in (ax[0], ax[1]):
     a.axvline(loc0, color="tab:red", ls="--"); a.set_xlim(0, 500)
 ax[0].plot(clean, "k"); ax[0].set_title("(1) the spike we're looking for, on its own")
 ax[1].plot(noisy, "k", lw=0.7)
 ax[1].set_title("(2) the same spike, now buried in noise — the red line shows where it is")
 ax[2].plot(shape, "tab:green"); ax[2].set_xlim(0, Lw)
 ax[2].set_title("(3) the template we slide along: our stored copy of the shape")
-ax[3].plot(corr_x, raw, "tab:blue")
-ax[3].set_title("(4) the sliding correlation — it peaks exactly where the spike is buried")
-ax[3].set_xlabel("position (sample)")
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
-The spike is invisible to the eye in panel (2), yet the correlation in panel (4) spikes
-right at its hidden location. That sliding dot product **is** the matched filter, and
-it's how we find each unit's spikes: correlate the recording with a unit's template, and
-the peaks are its spike times.
+The spike is invisible to the eye in panel (2). The tool that finds it — the **matched
+filter** — is yours to write.
+
+**Exercise 1** *(~5 min)*. Complete `sliding_correlation`: for every start position, slide the
+template along the trace, take the dot product with that window, and divide by the
+template's squared norm. Return the array of values.
+
+> **Check / unstuck.** The correlation should have one sharp peak, right at the red line
+> (position 250). Stuck? each value is
+> `np.dot(trace[i:i+L], template) / np.dot(template, template)`.
+""",),
+    code(
+        solution=r"""
+def sliding_correlation(trace, template):
+    L = len(template); norm = np.dot(template, template)
+    return np.array([np.dot(trace[i:i + L], template) / norm for i in range(len(trace) - L)])
+
+raw = sliding_correlation(noisy, shape)
+corr_x = np.arange(len(raw)) + trough          # align the output to the spike's trough
+plt.figure(figsize=(9, 2.6))
+plt.plot(corr_x, raw, "tab:blue"); plt.axvline(loc0, color="tab:red", ls="--"); plt.xlim(0, 500)
+plt.title("(4) the sliding correlation peaks exactly where the spike is buried")
+plt.xlabel("position (sample)"); plt.show()
+""",
+        student=r"""
+def sliding_correlation(trace, template):
+    L = len(template); norm = np.dot(template, template)
+    # YOUR CODE HERE: for each start position i (0 .. len(trace)-L), dot the template with
+    # trace[i:i+L] and divide by norm; return the array of these values over all i.
+    raise NotImplementedError
+
+raw = sliding_correlation(noisy, shape)
+corr_x = np.arange(len(raw)) + trough          # align the output to the spike's trough
+plt.figure(figsize=(9, 2.6))
+plt.plot(corr_x, raw, "tab:blue"); plt.axvline(loc0, color="tab:red", ls="--"); plt.xlim(0, 500)
+plt.title("(4) the sliding correlation peaks exactly where the spike is buried")
+plt.xlabel("position (sample)"); plt.show()
+""",
+    ),
+    md(r"""
+The correlation spikes right at the buried spike's location. That sliding dot product
+**is** the matched filter: correlate the recording with a unit's template, and the peaks
+are its spike times.
 
 One refinement turns the raw correlation into an actual *amplitude* — how big a copy of
 the template fits. How well does template $j$ fit the trace at time $t$? Slide it there,
@@ -159,7 +189,7 @@ least-squares fit above; peeling in order of score is what lets it separate two
 overlapping spikes that a single-label clusterer cannot.
 </details>
 
-**Exercise 1** *(~5 min)*. Complete `fit_amplitude`: given a trace window and a template
+**Exercise 2** *(~4 min)*. Complete `fit_amplitude`: given a trace window and a template
 (both `(n_channels, n_samples)`), return $a$. We'll fit neuron A's template to a *clean*
 copy of its spike.
 
@@ -195,21 +225,27 @@ Matching pursuit repeats one idea until nothing fits well:
 2. **subtract** that scaled template from the trace, and record a spike,
 3. repeat on the leftover **residual**.
 
-Run it on our collision, with A's and B's templates as the two candidates. Each panel is
-the leftover trace; the template about to be subtracted is drawn in red. Watch the lump
-resolve into two separate spikes:
+Step 1 is the greedy heart of the algorithm — and it's built from the two pieces you
+just wrote.
+
+**Exercise 3** *(~7 min · meaty)*. Complete `best_fit`: over every candidate template and every
+start time, fit the amplitude (reuse `fit_amplitude`), score it as $a^2\lVert
+\text{template}\rVert^2$, and return the highest-scoring fit — keeping only fits with
+$a > 0.3$. We then peel the two spikes off the collision with it.
+
+> **Check / unstuck.** Peeling should remove both spikes, leaving flat noise. Stuck? the
+> amplitude of `tmpl` at time `t` is `fit_amplitude(residual[t:t+L].T, tmpl)`.
 """,),
-    code(r"""
+    code(
+        solution=r"""
 candidates = [("A", tmplA, ps.plotting.unit_color(0)), ("B", tmplB, ps.plotting.unit_color(1))]
 
 def best_fit(residual, candidates):
-    # the greedy step: over both templates and all times, find the highest-scoring fit
     best = None
     for name, tmpl, col in candidates:
-        norm = np.sum(tmpl ** 2)
         for t in range(residual.shape[0] - L):
-            a = np.sum(residual[t:t + L] * tmpl.T) / norm
-            score = a * a * norm
+            a = fit_amplitude(residual[t:t + L].T, tmpl)          # reuse Exercise 2
+            score = a * a * np.sum(tmpl ** 2)
             if a > 0.3 and (best is None or score > best[0]):
                 best = (score, name, tmpl, col, t, a)
     return best
@@ -226,7 +262,34 @@ for step in range(2):
     ax[step + 1].set_title(f"after peeling neuron {name}  (amplitude a = {a:.2f})")
 ax[-1].set_xlabel("sample"); [a_.set_ylabel("µV") for a_ in ax]
 plt.tight_layout(); plt.show()
-""",),
+""",
+        student=r"""
+candidates = [("A", tmplA, ps.plotting.unit_color(0)), ("B", tmplB, ps.plotting.unit_color(1))]
+
+def best_fit(residual, candidates):
+    best = None
+    for name, tmpl, col in candidates:
+        for t in range(residual.shape[0] - L):
+            # YOUR CODE HERE: fit amplitude a of tmpl at time t with
+            # fit_amplitude(residual[t:t+L].T, tmpl); score = a**2 * np.sum(tmpl**2);
+            # keep the highest-scoring fit with a > 0.3 as best=(score, name, tmpl, col, t, a).
+            raise NotImplementedError
+    return best
+
+residual = seg.copy()
+fig, ax = plt.subplots(3, 1, figsize=(9, 5), sharex=True, sharey=True)
+ax[0].plot(residual[:, pc], "k"); ax[0].set_title("the collision (recorded)")
+for step in range(2):
+    score, name, tmpl, col, t, a = best_fit(residual, candidates)
+    fitted = np.zeros_like(residual); fitted[t:t + L] = a * tmpl.T
+    ax[step].plot(np.where(fitted[:, pc] == 0, np.nan, fitted[:, pc]), color="tab:red", lw=1.6)
+    residual = residual - fitted
+    ax[step + 1].plot(residual[:, pc], "k")
+    ax[step + 1].set_title(f"after peeling neuron {name}  (amplitude a = {a:.2f})")
+ax[-1].set_xlabel("sample"); [a_.set_ylabel("µV") for a_ in ax]
+plt.tight_layout(); plt.show()
+""",
+    ),
     md(r"""
 Whichever spike scores highest is peeled first; once it's gone the other stands alone
 and is peeled next. After both subtractions only noise is left — the collision has been
