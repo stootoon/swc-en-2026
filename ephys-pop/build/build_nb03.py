@@ -31,22 +31,31 @@ whitened, filtered, W = ps.preprocess(rec)
 ## 1. A threshold in noise units
 
 After whitening, every channel has noise of roughly the same **standard deviation**
-$\sigma$ — the typical wiggle size we met in Notebook 2. So we can set one threshold in
-units of $\sigma$ — say **5 sigma** — that means the same thing on every channel. We
-estimate each channel's $\sigma$ robustly with the **median absolute deviation** (the
-MAD, which a few big spikes can't inflate) and mark every trough that dips below
-$-5\sigma$.
+$\sigma$ — the typical wiggle size we met in Notebook 2 — so we can set one threshold in
+units of $\sigma$ (say **5 sigma**) that means the same thing on every channel, and
+flag every trough that dips below $-5\sigma$.
+
+But we have to *estimate* $\sigma$ from the data, and the obvious estimate — the plain
+standard deviation — is a trap: the spikes we're hunting are large outliers that inflate
+it (a channel with big spikes would look noisier than it is, so its threshold would be
+set too high). The fix is the **median absolute deviation (MAD)**, a spread measure that
+ignores outliers. It's the *median of how far each sample sits from the middle*:
+
+$$\mathrm{MAD} = \mathrm{median}\big(\,|x - \mathrm{median}(x)|\,\big).$$
+
+Being built from medians, a few big spikes can't drag it up. For Gaussian noise the MAD
+is a fixed fraction of $\sigma$, so $\hat\sigma = \mathrm{MAD}/0.6745$ recovers the
+standard deviation robustly. (Our whitened traces are already centred near zero, so
+$\mathrm{median}(x) \approx 0$ and the MAD is simply $\mathrm{median}(|x|)$.)
 
 <details>
 <summary><b>▸ Go deeper: the MAD, and why 5σ (optional)</b></summary>
 
-**Why the MAD, and the 0.6745.** The ordinary standard deviation is wrecked by the
-very spikes we're hunting — a handful of large outliers inflate it. The **median
-absolute deviation**, $\mathrm{MAD} = \mathrm{median}(|x|)$, ignores them (the median
-doesn't care about the tails). For Gaussian noise the MAD and the true $\sigma$ are
-related by a fixed constant: $\mathrm{MAD} = \Phi^{-1}(0.75)\,\sigma \approx 0.6745\,\sigma$,
-so $\hat\sigma = \mathrm{MAD}/0.6745$ recovers $\sigma$ robustly (this is the
-`/0.6745` in `channel_noise`).
+**Where the 0.6745 comes from.** For standard Gaussian noise, exactly half the
+probability mass of $|x|$ falls below $\Phi^{-1}(0.75) \approx 0.6745$ standard
+deviations (that's the 75th percentile of the normal distribution). So
+$\mathrm{median}(|x|) = 0.6745\,\sigma$ *exactly*, and dividing the MAD by $0.6745$
+undoes it to recover $\sigma$ — the `/0.6745` in `channel_noise`.
 
 **Why 5σ.** The threshold trades misses against false alarms. Under Gaussian noise,
 the chance a single sample dips below $-\theta\sigma$ is $\Phi(-\theta)$. At
@@ -58,7 +67,13 @@ false positives explode; raise it and you lose small spikes.
 </details>
 """,),
     code(r"""
-sd = ps.channel_noise(whitened)          # robust noise sigma per channel
+def channel_noise(traces):
+    # robust per-channel noise sigma: MAD / 0.6745 (traces are ~zero-centred)
+    return np.median(np.abs(traces), axis=0) / 0.6745    # this is exactly ps.channel_noise
+
+sd = channel_noise(whitened)
+print(f"whitened noise sigma, averaged over channels: {sd.mean():.2f}  (whitening flattened it to ~1)")
+
 ch = 15
 x = whitened[:, ch]
 i0, i1 = int(0.30 * rec.fs), int(0.45 * rec.fs)
@@ -125,13 +140,19 @@ print(f"detection recall: {(near <= tol).mean():.1%} of true spikes found")
     md(r"""
 Detection finds the large majority of true spikes. It misses a few (spikes buried in
 a collision, or the smallest ones) and picks up a few false crossings — both get
-sorted out later. Overlay the detections on the raw traces to see them land on the
-spikes:
+sorted out later. Zoom in on one detection, on the band of channels around it, to see
+the red mark land right on a spike (a short ~17 ms window — over a longer stretch the
+individual spikes blur into the noise):
 """,),
     code(r"""
-ps.plotting.plot_signal(whitened, rec.fs, channels=range(0, 14),
-                        t0=0.90, t1=0.99, mark_spikes=times,
-                        title="detected spikes (red) on the whitened traces")
+# center on a detected spike near t = 0.9 s, and show the channels around its peak
+i = int(np.argmin(np.abs(times - int(0.90 * rec.fs))))
+t_spk, pc = times[i], peak_channels[i]
+lo = min(max(0, pc - 6), rec.n_channels - 13)
+ps.plotting.plot_signal(whitened, rec.fs, channels=range(lo, lo + 13),
+                        t0=(t_spk - 250) / rec.fs, t1=(t_spk + 250) / rec.fs,
+                        mark_spikes=times,
+                        title="a detected spike (red) on the whitened traces")
 plt.show()
 """,),
     md(r"""
