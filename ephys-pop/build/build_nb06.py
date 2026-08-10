@@ -84,21 +84,29 @@ signal looks like the shape, small where it doesn't. Let's build that up in four
     code(r"""
 shape = tmplA[pc]                       # the shape we'll look for (neuron A's waveform)
 Lw = len(shape)
-loc0 = 250                              # where we'll hide it
+trough = int(np.argmin(shape))          # where the spike's trough sits inside the template
+loc0 = 250                              # we'll place the trough here
+start = loc0 - trough                    # so the template starts here
 rng = np.random.default_rng(1)
-clean = np.zeros(500); clean[loc0:loc0 + Lw] = shape          # (1) the shape on its own
+clean = np.zeros(500); clean[start:start + Lw] = shape         # (1) the shape on its own
 noisy = clean + rng.normal(0, shape.std() * 1.3, 500)        # (2) buried in noise
-corr = np.array([np.dot(noisy[i:i + Lw], shape) / np.dot(shape, shape)  # (4) sliding correlation
-                 for i in range(len(noisy) - Lw)])
+
+# (4) sliding correlation: raw[i] is the fit for a template STARTING at i; it peaks when
+# the template lines up, i.e. i = start. To plot it against the spike's *trough*
+# position (which is what the red line marks), shift the x-axis by `trough`.
+raw = np.array([np.dot(noisy[i:i + Lw], shape) / np.dot(shape, shape)
+                for i in range(len(noisy) - Lw)])
+corr_x = np.arange(len(raw)) + trough
 
 fig, ax = plt.subplots(4, 1, figsize=(9, 7.5))
-ax[0].plot(clean, "k"); ax[0].set_xlim(0, 500)
-ax[0].set_title("(1) the spike we're looking for, on its own")
-ax[1].plot(noisy, "k", lw=0.7); ax[1].axvline(loc0, color="tab:red", ls="--"); ax[1].set_xlim(0, 500)
+for a in (ax[0], ax[1], ax[3]):
+    a.axvline(loc0, color="tab:red", ls="--"); a.set_xlim(0, 500)
+ax[0].plot(clean, "k"); ax[0].set_title("(1) the spike we're looking for, on its own")
+ax[1].plot(noisy, "k", lw=0.7)
 ax[1].set_title("(2) the same spike, now buried in noise — the red line shows where it is")
 ax[2].plot(shape, "tab:green"); ax[2].set_xlim(0, Lw)
 ax[2].set_title("(3) the template we slide along: our stored copy of the shape")
-ax[3].plot(corr, "tab:blue"); ax[3].axvline(loc0, color="tab:red", ls="--"); ax[3].set_xlim(0, 500)
+ax[3].plot(corr_x, raw, "tab:blue")
 ax[3].set_title("(4) the sliding correlation — it peaks exactly where the spike is buried")
 ax[3].set_xlabel("position (sample)")
 plt.tight_layout(); plt.show()
@@ -227,50 +235,78 @@ one. That is the whole point of matching pursuit.
 
 ## 4. Matching pursuit on the whole recording
 
-`ps.matching_pursuit` runs this same peeling across the entire recording. Over 20
+`ps.matching_pursuit` runs this same peeling across the entire recording — over 20
 seconds our six neurons fire a **few hundred** times in total, so it peels off a few
-hundred spikes — one per real spike:
+hundred spikes, one per real spike:
 """,),
     code(r"""
 spike_times, spike_labels, spike_amps = ps.matching_pursuit(filtered, templates, amp_threshold=0.5)
 print(f"the recording contains ~{len(rec.ground_truth.spike_times)} true spikes; "
       f"matching pursuit peeled off {len(spike_times)}")
+""",),
+    md(r"""
+Watch it clear a **single channel** — its busiest stretch. Each panel subtracts one more
+spike (the red marks are the spike times); by the last panel the channel is just noise:
+""",),
+    code(r"""
+pk = np.array([ps.peak_channel(templates[l]) for l in spike_labels])   # each spike's channel
 
-# residual energy: the fraction of the recording still unexplained after N spikes removed
+# find the busiest ~160 ms stretch on one channel
+wl = int(0.16 * rec.fs)
+best_n, best_k = 0, 0
+for k in range(0, len(spike_times), 2):
+    t0, ch = spike_times[k], pk[k]
+    n = np.sum((spike_times >= t0 - wl // 2) & (spike_times < t0 + wl // 2) & (pk == ch))
+    if n > best_n:
+        best_n, best_k = n, k
+ch, t0 = pk[best_k], spike_times[best_k]
+w0 = int(t0 - wl // 2); w1 = w0 + wl
+sel = np.where((spike_times >= w0 + half) & (spike_times < w1 - half) & (pk == ch))[0]
+sel = sel[np.argsort(spike_times[sel])][:5]
+
+resid = filtered[w0:w1].copy()
+tt = (np.arange(w0, w1) - w0) / rec.fs * 1e3
+fig, axes = plt.subplots(len(sel) + 1, 1, figsize=(9, 1.2 * (len(sel) + 1)), sharex=True, sharey=True)
+axes[0].plot(tt, resid[:, ch], "k", lw=0.8)
+for m in sel:
+    axes[0].axvline((spike_times[m] - w0) / rec.fs * 1e3, color="tab:red", alpha=0.5, lw=1)
+axes[0].set_title(f"recorded (channel {ch}) — {len(sel)} spikes marked", fontsize=9)
+for step, m in enumerate(sel):
+    t = spike_times[m]
+    resid[t - half - w0:t + half + 1 - w0] -= spike_amps[m] * templates[spike_labels[m]].T
+    axes[step + 1].plot(tt, resid[:, ch], "k", lw=0.8)
+    axes[step + 1].set_title(f"after peeling spike {step + 1}", fontsize=9)
+axes[-1].set_xlabel("time (ms)"); [a.set_ylabel("µV") for a in axes]
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+One by one the spikes are subtracted and vanish. The same happens across the whole
+recording. To summarise the progress, here is the fraction of the **spike signal** still
+unexplained — measured on the samples *around* spikes, where the action is — as they're
+peeled off (measuring over the whole trace instead would hide it, since noise, not
+spikes, dominates the recording's total energy):
+""",),
+    code(r"""
 recon = np.zeros_like(filtered)
-total = np.sum(filtered ** 2)
-resid_energy = [1.0]
+near = np.zeros(len(filtered), bool)
+for t in spike_times:
+    near[t - half:t + half + 1] = True               # the samples around spikes
+spike_energy = np.sum(filtered[near] ** 2)
+frac = [1.0]
 for n, (t, lab, a) in enumerate(zip(spike_times, spike_labels, spike_amps), 1):
     recon[t - half:t + half + 1] += a * templates[lab].T
     if n % 20 == 0:
-        resid_energy.append(np.sum((filtered - recon) ** 2) / total)
+        frac.append(np.sum((filtered[near] - recon[near]) ** 2) / spike_energy)
 plt.figure(figsize=(6, 3.4))
-plt.plot(np.arange(len(resid_energy)) * 20, resid_energy, "o-", ms=3)
-plt.xlabel("number of spikes peeled off"); plt.ylabel("fraction of trace unexplained")
-plt.title(f"each spike explains a bit more — {len(spike_times)} spikes in all"); plt.ylim(0, 1)
+plt.plot(np.arange(len(frac)) * 20, frac, "o-", ms=3)
+plt.xlabel("number of spikes peeled off"); plt.ylabel("spike signal still unexplained")
+plt.title(f"peeling accounts for the spikes — {len(spike_times)} in all"); plt.ylim(0, 1.02)
 plt.show()
 """,),
     md(r"""
-Every subtracted spike removes a little more signal, so the unexplained fraction falls
-steadily as the few-hundred spikes are peeled. And on the real traces the reconstruction
-(the sum of all fitted templates) tracks the recording closely — here on the channel of
-the largest spike:
-""",),
-    code(r"""
-i = int(np.argmax(spike_amps))                       # the biggest spike MP found
-t0, pc2 = spike_times[i], ps.peak_channel(templates[spike_labels[i]])
-w = slice(t0 - 60, t0 + 60)
-tt = np.arange(w.start, w.stop) / rec.fs * 1e3
-plt.figure(figsize=(8, 3))
-plt.plot(tt, filtered[w, pc2], "k", lw=1.2, label="recorded")
-plt.plot(tt, recon[w, pc2], "tab:red", lw=1.2, ls="--", label="reconstruction (fitted template)")
-plt.xlabel("time (ms)"); plt.ylabel("µV"); plt.legend()
-plt.title(f"channel {pc2}: a real spike, explained by its template"); plt.show()
-""",),
-    md(r"""
-The dashed reconstruction sits right on top of the recorded spike: matching pursuit has
-correctly identified which template fired, when, and how big. Do that everywhere and you
-have a full spike train.
+The unexplained fraction falls steadily as the spikes are peeled (it settles above zero
+because noise remains even where spikes were). Matching pursuit has identified which
+template fired, when, and how big, everywhere — a full spike train.
 
 ## Wrap-up
 
