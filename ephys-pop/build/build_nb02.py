@@ -177,7 +177,7 @@ that slow wander, pulled out with a low-pass filter). On the **right**, in frequ
 that same drift shows up as a huge **mountain** of power piled up below ~100 Hz — the
 slow **drift** and **local field potential (LFP)**, the shared background swings of the
 tissue. (The y-axis is logarithmic, so each gridline is 10× the one below; we've zoomed
-to 0–800 Hz so the mountain is visible as a mountain rather than a thin spike at the
+to 0–400 Hz so the mountain is visible as a mountain rather than a thin spike at the
 edge.) Past the mountain the power drops to a low, broad **plateau** that continues out
 to several kHz — that's where the **spikes** live, since a spike is a fast event with
 its energy spread across high frequencies. Our whole job in this section: **keep the
@@ -376,28 +376,54 @@ the mean or the median? It matters, and here's why.
 A big spike is huge on its own channel but absent on the others. If we use the
 **mean** as the reference, that one big value drags the average up, and subtracting it
 then stamps a faint upside-down copy of the spike onto *every other channel* — an
-artefact we just created. The **median** ignores the lone outlier, so it doesn't. See
-it on a toy of 8 channels of noise with one big spike on channel 0:
+artefact we just created. The **median** ignores the lone outlier, so it doesn't. Here's
+a toy of 8 channels of noise with one big spike on channel 0:
 """,),
     code(r"""
 rng = np.random.default_rng(0)
 toy = rng.normal(0, 1.0, size=(300, 8))
 toy[150, 0] += 40                               # a big spike, on channel 0 only
 
-mean_ref = toy - toy.mean(axis=1, keepdims=True)      # reference = mean across channels
-median_ref = toy - np.median(toy, axis=1, keepdims=True)  # reference = median
-
-plt.figure(figsize=(9, 3.6))
-plt.plot(mean_ref[:, 3], color="tab:red", label="channel 3 after MEAN reference")
-plt.plot(median_ref[:, 3], color="tab:blue", label="channel 3 after MEDIAN reference")
+plt.figure(figsize=(9, 3.4))
+for c in range(8):
+    color = "tab:green" if c == 0 else ("tab:purple" if c == 3 else "k")
+    plt.plot(toy[:, c] + c * 8, lw=0.6, color=color)
+    plt.text(-8, c * 8, f"ch {c}", va="center", ha="right", fontsize=8, color=color)
 plt.axvline(150, color="0.7", ls="--")
-plt.title("channel 3 has no spike — yet the mean reference injects a fake dip; the median doesn't")
-plt.xlabel("sample"); plt.ylabel("value"); plt.legend(); plt.show()
+plt.title("8 toy channels: a big spike on channel 0 (green); channel 3 (purple) is spike-free")
+plt.xlabel("sample"); plt.yticks([]); plt.show()
 """,),
     md(r"""
-Under the **mean** reference (red) channel 3 gets a spurious negative blip at exactly
-the moment channel 0 spiked — a ghost spike we'd then have to worry about. Under the
-**median** reference (blue) it stays flat. So we use the median.
+Channel 0 (green) has the spike; channel 3 (purple), like the others, is just noise.
+Now form the across-channel reference two ways and look at what each does. The **mean**
+reference itself carries a bump at sample 150 (channel 0's spike dragged it up); the
+**median** reference is flat.
+""",),
+    code(r"""
+mean_ref_signal = toy.mean(axis=1)                       # the reference = mean across channels
+median_ref_signal = np.median(toy, axis=1)               # the reference = median
+
+fig, ax = plt.subplots(1, 2, figsize=(11, 3.2), sharey=False)
+ax[0].plot(mean_ref_signal, color="tab:red", label="MEAN across channels")
+ax[0].plot(median_ref_signal, color="tab:blue", label="MEDIAN across channels")
+ax[0].axvline(150, color="0.7", ls="--"); ax[0].legend(fontsize=8)
+ax[0].set_title("the reference signal — the mean carries channel 0's spike")
+ax[0].set_xlabel("sample"); ax[0].set_ylabel("value")
+
+# subtract each reference from the spike-free channel 3
+ax[1].plot(toy[:, 3] - mean_ref_signal, color="tab:red", label="ch 3 after MEAN reference")
+ax[1].plot(toy[:, 3] - median_ref_signal, color="tab:blue", label="ch 3 after MEDIAN reference")
+ax[1].axvline(150, color="0.7", ls="--"); ax[1].legend(fontsize=8)
+ax[1].set_title("channel 3 — the mean injects a fake dip; the median leaves it clean")
+ax[1].set_xlabel("sample")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Subtracting the **mean** reference (left→red) stamps a spurious negative blip onto
+channel 3 at exactly the moment channel 0 spiked — a ghost spike we'd then have to
+worry about — because the reference itself contained the spike. The **median**
+reference (blue) never picked up the outlier, so channel 3 stays clean. So we use the
+median.
 
 **Exercise 2** *(~3 min · easy)*. Complete `common_average_reference`: subtract the median
 across channels (axis 1) at every time sample.
@@ -433,9 +459,22 @@ statistics.
 **Variance** measures how much a signal *wiggles* around its average: small variance =
 nearly flat, large variance = big swings. Its square root is the **standard deviation**
 $\sigma$ — the typical size of a wiggle, and the very "sigma" we'll set a detection
-threshold in (Notebook 3).
+threshold in (Notebook 3). Three signals of increasing variance:
+""",),
+    code(r"""
+rng = np.random.default_rng(0)
+fig, ax = plt.subplots(1, 3, figsize=(12, 2.6), sharey=True)
+for a, sd in zip(ax, [0.5, 2.0, 5.0]):
+    a.plot(rng.normal(0, sd, 500), lw=0.7, color="k")
+    a.set_title(f"variance = {sd**2:.2f}   (σ = {sd})"); a.set_xlabel("sample")
+ax[0].set_ylabel("value"); ax[0].set_ylim(-16, 16)
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Low variance is a nearly flat line; high variance swings wildly. Now for *two* channels
+at once.
 
-**Covariance** compares *two* channels: when channel A is above its own average, does
+**Covariance** compares two channels: when channel A is above its own average, does
 channel B tend to be above its average too? If so they **co-vary**. The clearest way
 to see it is to scatter one channel's voltage against another's, sample by sample, and
 draw the **ellipse** that summarises the cloud's shape:
@@ -464,7 +503,7 @@ for a, xy, other, label in [(ax[0], xy_near, neighbour, "neighbour"), (ax[1], xy
     a.set_title(f"ch {ch} vs {label} ch {other}"); a.set_aspect("equal")
     a.set_xlabel("voltage (µV)"); a.set_ylabel("voltage (µV)")
 ax[0].text(0.05, 0.9, "tilted → they co-vary", transform=ax[0].transAxes, color="tab:red")
-ax[1].text(0.05, 0.9, "round → independent", transform=ax[1].transAxes, color="tab:red")
+ax[1].text(0.05, 0.9, "not tilted → independent", transform=ax[1].transAxes, color="tab:red")
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
@@ -488,12 +527,17 @@ $\begin{pmatrix}\text{var}(A) & \text{cov}(A,B)\\ \text{cov}(A,B) & \text{var}(B
   neither cloud is much wider than it is tall to begin with);
 - the **off-diagonal** entry is the **covariance** — large and positive for the
   neighbours (the cloud leans hard along the diagonal), near zero for the far pair
-  (no lean). *That single number is the tilt.*
+  (no lean). *That single number is the tilt* — and the tilt, not the exact roundness,
+  is the signature of correlation.
 
 And the **ellipse's principal axes** are the matrix's **eigenvectors**, with the
 squared half-length of each axis given by the matching **eigenvalue** (the variance
-along that axis). So a big gap between the two eigenvalues = a long, thin, tilted
-ellipse (shared noise); two near-equal eigenvalues = a round blob. Let's read them off:
+along that axis). A big gap between the two eigenvalues, with the long axis pointing
+*along the diagonal*, means a stretched, tilted ellipse (shared noise). The far pair's
+ellipse is close to round and, crucially, sits *upright* — its axes line up with the
+channels, so neither one predicts the other. (It needn't be perfectly round: if two
+independent channels simply had different variances, their cloud would be an
+axis-aligned ellipse — stretched, but not tilted.) Let's read the eigenvalues off:
 """,),
     code(r"""
 vals_n, _ = np.linalg.eigh(np.cov(xy_near.T))     # eigenvalues = variance along each axis
