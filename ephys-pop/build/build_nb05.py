@@ -72,11 +72,35 @@ there, and *where does each spike belong?*
 ## 2. How many units? The BIC
 
 Clustering needs to know how many clusters to look for, and we don't — that's part of
-what we're trying to discover. One principled answer: fit a **Gaussian mixture** for
-each candidate count $k$ and score it by the **Bayesian Information Criterion (BIC)**,
-which rewards fit but penalises extra clusters. The BIC falls steeply as $k$ climbs
-toward the true number, then flattens — the **elbow** marks how many units are really
-there.
+what we're trying to discover. First, see what goes wrong when you guess:
+""",),
+    code(r"""
+fig, ax = plt.subplots(1, 3, figsize=(13, 4), sharex=True, sharey=True)
+for a, k in zip(ax, [3, 6, 9]):
+    lab_k = GaussianMixture(k, n_init=5, random_state=0).fit_predict(features)
+    for g in range(k):
+        a.scatter(depth[lab_k == g], amplitude[lab_k == g], s=10, color=ps.plotting.unit_color(g))
+    a.set_title(f"k = {k}  ({'too few' if k == 3 else 'just right' if k == 6 else 'too many'})")
+    a.set_xlabel("depth (µm)")
+ax[0].set_ylabel("amplitude (µV)")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+With **k = 3** (left) the mixture is forced to lump distinct units into one blob — a
+poor fit, with points stranded far from their cluster's centre. With **k = 9** (right)
+it splits a *single* real unit across two colours — which explains the data no better
+than one cluster did, since those points were already well accounted for. **k = 6**
+(middle) is the sweet spot: one cluster per real group, none wasted.
+
+The **BIC (Bayesian Information Criterion)** turns this trade-off into one number to
+minimise: $\mathrm{BIC} = \text{misfit} + \text{penalty}$, where *misfit* measures how
+badly the model explains the data (smaller is better) and *penalty* charges a fixed
+cost for every cluster's parameters. **Why does it have an elbow?** Each cluster you add
+*up to* the true number lets the model wrap a Gaussian around a real group it was
+missing, so the misfit drops **steeply** — easily worth the small penalty. Each cluster
+*beyond* the true number only carves up a group that was *already* well explained, so
+the misfit barely moves while you keep paying the penalty. A steep drop, then a flat
+plateau — and the bend between them, the **elbow, is the honest unit count.**
 
 <details>
 <summary><b>▸ Go deeper: Gaussian mixtures, and where the BIC comes from (optional)</b></summary>
@@ -161,35 +185,57 @@ close units and split a third.)
     code(
         solution=r"""
 labels = GaussianMixture(6, n_init=10, random_state=0).fit_predict(features)
-
-fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-ps.plotting.plot_feature_space(depth, amplitude, labels, ax=axes[0],
-                               title="clusters in depth–amplitude")
-emb = ps.tsne_embedding(features)
-for u in np.unique(labels):
-    m = labels == u
-    axes[1].scatter(emb[m, 0], emb[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
-axes[1].set_title("t-SNE of the feature space"); axes[1].set_xlabel("t-SNE 1"); axes[1].set_ylabel("t-SNE 2")
-plt.tight_layout(); plt.show()
+ps.plotting.plot_feature_space(depth, amplitude, labels, title="clusters in depth–amplitude")
+plt.show()
 """,
         student=r"""
 labels = GaussianMixture(6, n_init=10, random_state=0).fit_predict(features)
-
-fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-ps.plotting.plot_feature_space(depth, amplitude, labels, ax=axes[0],
-                               title="clusters in depth–amplitude")
-emb = ps.tsne_embedding(features)
-for u in np.unique(labels):
-    m = labels == u
-    axes[1].scatter(emb[m, 0], emb[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
-axes[1].set_title("t-SNE of the feature space"); axes[1].set_xlabel("t-SNE 1"); axes[1].set_ylabel("t-SNE 2")
-plt.tight_layout(); plt.show()
+ps.plotting.plot_feature_space(depth, amplitude, labels, title="clusters in depth–amplitude")
+plt.show()
 """,
     ),
     md(r"""
-The **t-SNE** plot is a QC tool: it squashes the feature space to 2-D so you can
-eyeball whether the clusters are genuinely separate blobs (good) or smeared into each
-other (a warning). Here they're clean, well-isolated islands.
+The six clusters match the six blobs by eye. But we clustered on just two features
+(depth, amplitude) — how do we know these are *really* six distinct neurons, and not
+(say) one neuron artificially split? A good check is to look at the clusters in the
+**full waveform space**: every spike's complete multichannel snippet (~2000 numbers),
+where two genuinely different neurons should differ in *many* ways at once.
+
+We can't plot 2000 dimensions, so we squash them to 2-D — and *which* squashing matters.
+The obvious tool is **PCA**, but PCA is **linear**: it keeps the two directions of
+largest variance, and distinct clusters can still land on top of each other in that
+projection (you saw exactly this in Notebook 4, where PC1 just re-encoded amplitude).
+**t-SNE** is a **nonlinear** embedding built for this job: it tries to keep every point
+near its true neighbours and push unrelated points apart, so genuinely separate groups
+fall into cleanly separated **islands**. Compare the two on our snippets:
+""",),
+    code(r"""
+from sklearn.decomposition import PCA
+X = snippets.reshape(len(snippets), -1)          # every spike as its full multichannel snippet
+pca2 = PCA(n_components=2).fit_transform(X)       # linear 2-D projection
+emb = ps.tsne_embedding(X)                         # nonlinear 2-D embedding (sklearn's TSNE)
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+for u in np.unique(labels):
+    m = labels == u
+    axes[0].scatter(pca2[m, 0], pca2[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
+    axes[1].scatter(emb[m, 0], emb[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
+axes[0].set_title("PCA (linear) — some clusters overlap")
+axes[1].set_title("t-SNE (nonlinear) — clean islands")
+for a in axes:
+    a.set_xticks([]); a.set_yticks([])
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+In the **PCA** projection several clusters pile up in the middle — the linear map can't
+pull them apart. In the **t-SNE** map all six sit in clean, separate islands: strong
+confirmation that our six clusters really are six distinct units. That's why t-SNE is a
+staple of spike-sorting QC.
+
+**One caution.** t-SNE is for *looking*, not measuring — the distances between islands
+and their sizes are **not** meaningful (it deliberately warps space to separate
+neighbourhoods), and on structureless data it can even invent apparent clusters. Use it
+to eyeball separation, never as proof on its own.
 
 ## 4. From clusters to templates
 
