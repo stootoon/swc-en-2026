@@ -174,9 +174,51 @@ Matching pursuit repeats one idea until nothing fits well:
 2. **subtract** that scaled template from the trace, and record a spike,
 3. repeat on the leftover **residual**.
 
-Each subtraction removes one spike — including one member of a collision, so the
-other is exposed on the next pass. `ps.matching_pursuit` runs this efficiently over
-the whole recording. Watch the residual energy fall as spikes are peeled off:
+Each subtraction removes one spike — including one member of a collision, so the other
+is exposed on the next pass. Watch it happen on a clean example: three spikes on one
+channel, two of them overlapping. Each panel is the leftover trace, with the next
+template about to be subtracted drawn in red; after the last one, only noise remains.
+""",),
+    code(r"""
+# a clean illustration: three spikes on one channel, two overlapping, peeled one by one
+wf = templates[0][ps.peak_channel(templates[0])]        # one unit's peak-channel waveform
+L = len(wf)
+rng = np.random.default_rng(0)
+trace = np.zeros(230)
+for t0, amp in [(30, 1.0), (95, 0.7), (120, 1.2)]:      # the 2nd and 3rd overlap
+    trace[t0:t0 + L] += amp * wf
+trace += rng.normal(0, 0.06 * np.abs(wf).max(), len(trace))
+
+def best_fit(residual, wf):
+    # slide the template, find the time of best fit and its amplitude (the greedy step)
+    norm = np.dot(wf, wf)
+    corr = np.array([np.dot(residual[i:i + L], wf) / norm for i in range(len(residual) - L)])
+    i = int(np.argmax(corr))
+    return i, corr[i]
+
+residual = trace.copy()
+fig, axes = plt.subplots(4, 1, figsize=(8, 7), sharex=True, sharey=True)
+axes[0].plot(trace, "k", lw=1); axes[0].set_title("recorded: three spikes (two overlapping)")
+for step in range(3):
+    i, a = best_fit(residual, wf)
+    fitted = np.zeros_like(residual); fitted[i:i + L] = a * wf
+    axes[step].plot(fitted, "tab:red", lw=1.3)          # the template about to be subtracted
+    residual = residual - fitted
+    axes[step + 1].plot(residual, "k", lw=1)
+    axes[step + 1].set_title(f"after peeling spike {step + 1}  (best fit, amplitude {a:.2f})")
+axes[-1].set_xlabel("sample")
+for a in axes:
+    a.set_ylabel("µV")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+The biggest spike is peeled first, then the next, then the last — and the two that
+overlapped come apart cleanly, because once the first is gone the second stands alone.
+After the third subtraction the residual is flat: every spike is accounted for.
+
+`ps.matching_pursuit` does exactly this across the whole recording. As a summary, here's
+the **residual energy** — the fraction of the trace still unexplained — falling as
+spikes are peeled off:
 """,),
     code(r"""
 spike_times, spike_labels, spike_amps = ps.matching_pursuit(filtered, templates, amp_threshold=0.5)
