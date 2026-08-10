@@ -174,11 +174,11 @@ plt.title(f"first 2 PCs capture {ev[:2].sum():.0%} of waveform variation"); plt.
 """,),
     md(r"""
 **Exercise 2** *(~6 min)*. Complete `pca_scores`: centre the waveforms, take the SVD, and
-project onto the top `k` right-singular vectors (the principal components). Return
-the scores.
+project onto the top `k` right-singular vectors (the principal components). Return the
+scores — each spike's `k` numbers.
 
-> **Check / unstuck.** `scores` should be `(n_spikes, k)`. The PC1–PC2 scatter below
-> should show structure (blobs). Stuck? Use `ps.pca_features(waveforms, 2)[0]`.
+> **Check / unstuck.** `scores` should be `(n_spikes, 2)`. Stuck? Use
+> `ps.pca_features(waveforms, 2)[0]`.
 """,),
     code(
         solution=r"""
@@ -188,11 +188,8 @@ def pca_scores(waveforms, k=2):
     return X @ Vt[:k].T
 
 scores = pca_scores(waveforms, 2)
-print("scores:", scores.shape)
-plt.figure(figsize=(5, 4))
-plt.scatter(scores[:, 0], scores[:, 1], s=8, c=depth, cmap="viridis")
-plt.colorbar(label="depth (µm)"); plt.xlabel("PC1"); plt.ylabel("PC2")
-plt.title("waveform shape space (coloured by depth)"); plt.show()
+print("each of the", len(scores), "spikes is now just", scores.shape[1], "numbers instead of",
+      waveforms.shape[1])
 """,
         student=r"""
 def pca_scores(waveforms, k=2):
@@ -202,27 +199,60 @@ def pca_scores(waveforms, k=2):
     raise NotImplementedError
 
 scores = pca_scores(waveforms, 2)
-print("scores:", scores.shape)
-plt.figure(figsize=(5, 4))
-plt.scatter(scores[:, 0], scores[:, 1], s=8, c=depth, cmap="viridis")
-plt.colorbar(label="depth (µm)"); plt.xlabel("PC1"); plt.ylabel("PC2")
-plt.title("waveform shape space (coloured by depth)"); plt.show()
+print("each of the", len(scores), "spikes is now just", scores.shape[1], "numbers instead of",
+      waveforms.shape[1])
 """,
     ),
     md(r"""
+What *is* this "shape space"? Two things worth seeing. **(left)** what the axes mean:
+start from the average waveform and move along PC1, or along PC2, to see the shape
+change each one controls. **(right)** every spike placed at its `(PC1, PC2)` — its
+whole 61-sample waveform boiled down to two numbers.
+""",),
+    code(r"""
+scores2, components, mean_wave = ps.pca_features(waveforms, 2)   # components = the shape modes
+tt = np.arange(waveforms.shape[1])
+
+fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+# (left) what each PC means, as a shape: the mean waveform, nudged +/- along each PC
+for k, col in [(0, "tab:red"), (1, "tab:green")]:
+    step = 2 * scores2[:, k].std()
+    ax[0].plot(tt, mean_wave + step * components[k], color=col, lw=1, label=f"mean + PC{k+1}")
+    ax[0].plot(tt, mean_wave - step * components[k], color=col, lw=1, ls="--", label=f"mean − PC{k+1}")
+ax[0].plot(tt, mean_wave, "k", lw=2.5, label="mean waveform")
+ax[0].set_title("what the PC axes mean, as shapes"); ax[0].set_xlabel("sample")
+ax[0].set_ylabel("µV"); ax[0].legend(fontsize=7)
+# (right) every spike as a point in shape space
+sc = ax[1].scatter(scores[:, 0], scores[:, 1], s=8, c=amplitude, cmap="viridis")
+plt.colorbar(sc, ax=ax[1], label="amplitude (µV)")
+ax[1].set_title("every spike as 2 numbers (its shape)"); ax[1].set_xlabel("PC1"); ax[1].set_ylabel("PC2")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Reading the left panel: moving along **PC1** (red) mostly scales the whole spike up and
+down — it captures **overall size**. **PC2** (green) tweaks the **shape** (the width and
+rebound). Each spike is now a point in this plane.
+
+On the right, the spikes do fall into groups along **PC1** — but look at the colour:
+PC1 is essentially tracking **amplitude** (dark = small, yellow = large). So the
+separation you see along PC1 is the *same* separation amplitude already gave us, just
+relabelled. The genuinely *shape*-based axis is **PC2**, and here it barely separates
+anything, because our six units all make similar biphasic spikes. That's fine — depth
+and amplitude already did the job. **PC2 (pure shape) earns its keep only when two units
+share a location** — which is exactly the case we build next.
+
 ## 4. When shape is the only clue *(optional)*
 
-*Skippable.* To see why shape matters, build two units at the **same depth** and
-**same amplitude** but with different waveform widths. In the depth–amplitude plane
-they're one blob; in the PC (shape) plane they split cleanly. On our main recording
-depth and amplitude are enough, but in dense tissue shape is what saves you.
+*Skippable.* Build two units at the **same depth** and **same amplitude**, differing
+only in their waveform **width**. Depth and amplitude now see one blob — but their
+*shapes* differ, so PCA splits them. First, the two units' actual waveforms (the clue),
+then the two feature spaces:
 """,),
     code(r"""
 probe = rec.probe
 def one_unit(width, seed):
     wf = ps.spike_waveform(trough_width=width)
     tmpl = ps.make_template(probe, [0, 300], amplitude=150, waveform=wf)
-    # jitter each spike with noise to make a cloud
     rng = np.random.default_rng(seed)
     return np.array([tmpl + rng.normal(0, 8, tmpl.shape) for _ in range(120)])
 
@@ -231,14 +261,21 @@ lab = np.r_[np.zeros(120), np.ones(120)].astype(int)
 _, amp2, dep2 = ps.localize(snips, probe)
 sc2 = ps.pca_features(ps.peak_waveforms(snips), 2)[0]
 
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
+# (1) the actual waveforms -- the shape difference PCA will detect
+for u, width in [(0, 2.2), (1, 3.8)]:
+    axes[0].plot(ps.spike_waveform(trough_width=width), color=ps.plotting.unit_color(u),
+                 lw=2, label=f"unit {u} (width {width})")
+axes[0].set_title("the two units' waveforms"); axes[0].set_xlabel("sample")
+axes[0].set_ylabel("amplitude (norm.)"); axes[0].legend(fontsize=8)
+# (2) + (3) the two feature spaces
 for u in [0, 1]:
     m = lab == u
-    axes[0].scatter(dep2[m], amp2[m], s=10, color=ps.plotting.unit_color(u))
-    axes[1].scatter(sc2[m, 0], sc2[m, 1], s=10, color=ps.plotting.unit_color(u), label=f"unit {u}")
-axes[0].set_title("depth–amplitude: one blob"); axes[0].set_xlabel("depth"); axes[0].set_ylabel("amp")
-axes[1].set_title("PC (shape) space: two clusters"); axes[1].set_xlabel("PC1"); axes[1].set_ylabel("PC2")
-axes[1].legend(); plt.tight_layout(); plt.show()
+    axes[1].scatter(dep2[m], amp2[m], s=10, color=ps.plotting.unit_color(u))
+    axes[2].scatter(sc2[m, 0], sc2[m, 1], s=10, color=ps.plotting.unit_color(u), label=f"unit {u}")
+axes[1].set_title("depth–amplitude: one blob"); axes[1].set_xlabel("depth"); axes[1].set_ylabel("amp")
+axes[2].set_title("PC (shape) space: two clusters"); axes[2].set_xlabel("PC1"); axes[2].set_ylabel("PC2")
+axes[2].legend(); plt.tight_layout(); plt.show()
 """,),
     md(r"""
 ## Wrap-up
