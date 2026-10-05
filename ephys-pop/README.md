@@ -1,4 +1,4 @@
-# ephys-pop — spike sorting (SWC ENC 2026)
+# Population Electrophysiology: Spike Sorting
 
 Build **picosort**, a miniature spike sorter loosely following the stages of
 **Kilosort4**, and understand what a real sorter does to your Neuropixels data.

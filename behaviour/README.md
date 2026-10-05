@@ -1,4 +1,4 @@
-# Behaviour module — SWC ENC 2026
+# Behaviour Analysis
 
 A one-day, hands-on introduction to the statistics behind **Figures 1–3 of
 Piet et al. (2024), *Neuron*** ("Behavioral strategy shapes activation of the

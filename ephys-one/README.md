@@ -1,4 +1,4 @@
-# ephys-one — counting channels (SWC ENC 2026)
+# Single Cell Electrophysiology: Fluctuation Analysis
 
 Record from a single cell under **voltage clamp**, and work out **how many ion
 channels** are in the membrane and **how much current flows through each one** —
