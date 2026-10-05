@@ -1,0 +1,7 @@
+# SWC ENC 2026 — ephys-one (counting channels) module
+# Tested with Python 3.9. Versions are lower bounds; newer should work.
+numpy>=1.26
+scipy>=1.11
+matplotlib>=3.7
+jupyterlab>=4.0
+ipykernel>=6.0

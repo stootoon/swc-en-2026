@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "picopatch"
+version = "0.1.0"
+description = "Backend for the SWC ENC 2026 ephys-one (counting channels by noise analysis) teaching module"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy>=1.26",
+    "scipy>=1.11",
+    "matplotlib>=3.7",
+]
+
+[tool.setuptools]
+packages = ["picopatch"]

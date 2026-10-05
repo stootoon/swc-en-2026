@@ -25,8 +25,8 @@ cd swc-en-2026/behaviour     # see behaviour/README.md for setup
 | module | topic |
 |---|---|
 | [`behaviour/`](behaviour/) | Quantifying behavioural strategy — the statistics behind Figures 1–3 of Piet et al. (2024), *Neuron*, taught on synthetic data with known ground truth |
-| [`ephys-pop/`](ephys-pop/) | Spike sorting — build "picosort", a miniature sorter loosely following Kilosort4, on synthetic recordings with known ground truth *(in progress)* |
-| `neuropixels/` | *(to come)* |
+| [`ephys-pop/`](ephys-pop/) | Spike sorting — build "picosort", a miniature sorter loosely following Kilosort4, on synthetic recordings with known ground truth |
+| [`ephys-one/`](ephys-one/) | Counting channels — recover the number of ion channels and the unitary current from the fluctuations of a voltage-clamp current (nonstationary noise analysis, after Alvarez, Gonzalez & Latorre 2002), on simulated patches with known ground truth |
 
 Each module is self-contained: its own notebooks, environment and README.
 
