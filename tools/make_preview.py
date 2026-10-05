@@ -188,8 +188,12 @@ def inject_nav(path, nbs, idx, solutions, nb_dir):
 
 
 def convert(ipynb, outdir):
+    # NOTE: no --embed-images. Figure outputs are inlined as data URIs anyway, and
+    # that flag re-parses the HTML in a way that closes every <details> block right
+    # after its <summary>, leaving the "Go deeper" content permanently unfolded.
+    # Raw <img> tags in markdown cells are inlined by embed_local_images() below.
     subprocess.run([sys.executable, "-m", "nbconvert", "--to", "html",
-                    "--embed-images", "--output-dir", outdir, ipynb],
+                    "--output-dir", outdir, ipynb],
                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
 
