@@ -247,9 +247,10 @@ for row, n_sw in zip(axes, [20, 100, 500]):
     i_s, N_s = bootstrap_fit(e.sweeps, n_boot=200, rng=0)
     pp.plotting.plot_bootstrap(i_s, N_s, truth=e.truth, axes=row)
     lo, hi = np.percentile(N_s[np.isfinite(N_s)], [2.5, 97.5])
-    row[0].set_title(f"{n_sw} sweeps", loc="left", fontweight="bold")
+    ilo, ihi = np.percentile(i_s, [2.5, 97.5])
+    row[0].set_title(f"{n_sw} sweeps — 95% interval for i: [{ilo:.2f}, {ihi:.2f}] pA", loc="left", fontweight="bold")
     row[1].set_title(f"95% interval for N: [{lo:.0f}, {hi:.0f}]", loc="left")
-    row[1].set_xlim(0, 3000)
+    row[0].set_xlim(0.5, 2.5); row[1].set_xlim(0, 3000)          # shared axes so the shrinking is visible
 plt.tight_layout(); plt.show()
 """,
         student=r"""
@@ -268,9 +269,10 @@ for row, n_sw in zip(axes, [20, 100, 500]):
     i_s, N_s = bootstrap_fit(e.sweeps, n_boot=200, rng=0)
     pp.plotting.plot_bootstrap(i_s, N_s, truth=e.truth, axes=row)
     lo, hi = np.percentile(N_s[np.isfinite(N_s)], [2.5, 97.5])
-    row[0].set_title(f"{n_sw} sweeps", loc="left", fontweight="bold")
+    ilo, ihi = np.percentile(i_s, [2.5, 97.5])
+    row[0].set_title(f"{n_sw} sweeps — 95% interval for i: [{ilo:.2f}, {ihi:.2f}] pA", loc="left", fontweight="bold")
     row[1].set_title(f"95% interval for N: [{lo:.0f}, {hi:.0f}]", loc="left")
-    row[1].set_xlim(0, 3000)
+    row[0].set_xlim(0.5, 2.5); row[1].set_xlim(0, 3000)          # shared axes so the shrinking is visible
 plt.tight_layout(); plt.show()
 """,
     ),
