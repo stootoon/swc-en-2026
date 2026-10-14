@@ -14,6 +14,7 @@ ground truth — the organizing question of the day is *"can we recover the trut
 ```bash
 cd behaviour
 python3 -m venv .venv
+./.venv/bin/pip install --upgrade pip setuptools wheel   # stock macOS pip is too old for the next line
 ./.venv/bin/pip install -e .           # installs swcbehav + numpy/scipy/matplotlib/pandas
 ./.venv/bin/pip install jupyterlab ipykernel
 ./.venv/bin/python -m ipykernel install --user \
