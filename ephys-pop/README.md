@@ -31,6 +31,7 @@ what the QC and scoring tools reveal.
 ```bash
 cd ephys-pop
 python -m venv .venv && source .venv/bin/activate
+pip install --upgrade pip setuptools wheel   # the stock macOS pip is too old for the editable install below
 pip install -r requirements.txt
 pip install -e .                       # installs the picosort backend
 python -m ipykernel install --user --name swc-ephys-pop --display-name "SWC Ephys-Pop (.venv)"
