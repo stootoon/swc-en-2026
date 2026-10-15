@@ -14,8 +14,9 @@ the five strategies* is doing the work. To find out, we **ablate**: remove a
 strategy, refit, and see how much the model's predictions suffer. The strategies
 whose removal hurts most are the ones the mouse is really using.
 
-We'll measure "how much it hurts" with the **held-out log-likelihood** you
-already built in Notebook 4 — a fair, overfitting-resistant currency. (The paper
+We'll measure "how much it hurts" with the **held-out log-likelihood**: the
+likelihood you built in Notebook 3, scored on held-out folds using the
+cross-validation from Notebook 4 — a fair, overfitting-resistant currency. (The paper
 uses a more elaborate quantity, *model evidence*; that's the optional advanced
 section at the end, for anyone who wants the full picture.)
 
