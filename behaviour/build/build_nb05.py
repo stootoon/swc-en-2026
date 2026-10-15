@@ -84,11 +84,69 @@ about 30% of the time. A model that orders images well but is over-confident
 That sensitivity to the actual probabilities is exactly what we want when asking
 whether *adding a strategy* genuinely buys the model anything.
 """),
+    md(r"""
+**Exercise 1** *(~8 min)*. Build the score yourself, from pieces you already have.
+
+1. `mean_log_likelihood(w, X, y)`: the average over images of the log-probability the
+   model put on what happened. With $z_t = x_t \cdot w$ and $p_t = \sigma(z_t)$, that
+   is $\log p_t$ on bout images and $\log(1-p_t)$ on quiet ones. The compact form you
+   met in Notebook 3, $y_t z_t - \log(1 + e^{z_t})$, covers both cases at once;
+   `np.logaddexp(0, z)` computes $\log(1 + e^{z})$ without overflow.
+2. `cross_val_loglik(X, y, n_folds)`: the same contiguous-fold loop as Notebook 4's
+   `cross_val_auc`, but fit on the training folds with `sb.fit_static` and score the
+   held-out fold with your `mean_log_likelihood` instead of the AUC. Return the mean
+   over folds.
+
+> **Check / unstuck.** At $w = 0$ every image gets $p = 0.5$, so the mean
+> log-likelihood is $\log 0.5 \approx -0.693$. For the visual mouse the
+> cross-validated score should be about **−0.217 nats/image**, a shade below the
+> in-sample **−0.215**. Stuck? `sb.mean_log_likelihood` and `sb.cross_val_loglik`.
+"""),
+    code(
+        solution=r"""
+def mean_log_likelihood(w, X, y):
+    z = X @ w
+    return np.mean(y * z - np.logaddexp(0.0, z))
+
+def cross_val_loglik(X, y, n_folds=5):
+    n = len(y)
+    folds = np.array_split(np.arange(n), n_folds)
+    lls = []
+    for i in range(n_folds):
+        test = folds[i]
+        train = np.setdiff1d(np.arange(n), test)
+        w = sb.fit_static(X[train], y[train])
+        lls.append(mean_log_likelihood(w, X[test], y[test]))
+    return np.mean(lls)
+""",
+        student=r"""
+def mean_log_likelihood(w, X, y):
+    # YOUR CODE HERE: average over images of  y*z - log(1 + e^z),  with z = X @ w
+    raise NotImplementedError
+
+def cross_val_loglik(X, y, n_folds=5):
+    n = len(y)
+    folds = np.array_split(np.arange(n), n_folds)
+    lls = []
+    for i in range(n_folds):
+        test = folds[i]
+        train = np.setdiff1d(np.arange(n), test)
+        # YOUR CODE HERE: fit on train (sb.fit_static), score the test fold with
+        # mean_log_likelihood, append to lls
+        raise NotImplementedError
+    return np.mean(lls)
+""",
+    ),
     code(r"""
 sess = sb.make_mouse("visual", seed=0)
 X, y, cols = get_Xy(sess)
-full_ll = sb.cross_val_loglik(X, y)
-print(f"full model, cross-validated log-likelihood: {full_ll:.4f} nats/image")
+
+w0 = np.zeros(X.shape[1])
+print(f"sanity check at w = 0: {mean_log_likelihood(w0, X, y):.4f}   (log 0.5 = {np.log(0.5):.4f})")
+w_full = sb.fit_static(X, y)
+print(f"in-sample log-likelihood       : {mean_log_likelihood(w_full, X, y):.4f} nats/image")
+full_ll = cross_val_loglik(X, y)
+print(f"cross-validated log-likelihood : {full_ll:.4f} nats/image   (backend: {sb.cross_val_loglik(X, y):.4f})")
 """),
     md(r"""
 ## 2. Ablation: does a strategy earn its place?
@@ -112,28 +170,29 @@ $$\Delta_{\text{strategy}} = \text{LL}_{\text{full}} - \text{LL}_{\text{without 
 reading a large positive $\Delta$ as "the mouse relies on this strategy" and
 $\Delta \approx 0$ as "it isn't using it."
 
-**Exercise 1** *(~6 min)*. Complete `ablation_deltas`: for each non-bias strategy, build the
+**Exercise 2** *(~6 min)*. Complete `ablation_deltas`: for each non-bias strategy, build the
 design matrix without that column and compute $\Delta$.
 *Hint:* `np.delete(X, k, axis=1)` removes column `k`.
 
 > **Check / unstuck.** For the visual mouse, expect **visual ≈ +0.24** and the other
-> three ≈ 0. Stuck? Use `sb.ablation_loglik_deltas(X, y, cols)`.
+> three ≈ 0 (it reuses the `cross_val_loglik` you just wrote). Stuck? Use
+> `sb.ablation_loglik_deltas(X, y, cols)`.
 """),
     code(
         solution=r"""
 def ablation_deltas(X, y, cols, n_folds=5):
-    full_ll = sb.cross_val_loglik(X, y, n_folds)
+    full_ll = cross_val_loglik(X, y, n_folds)
     deltas = {}
     for k, name in enumerate(cols):
         if name == "bias":
             continue
         X_without = np.delete(X, k, axis=1)
-        deltas[name] = full_ll - sb.cross_val_loglik(X_without, y, n_folds)
+        deltas[name] = full_ll - cross_val_loglik(X_without, y, n_folds)
     return deltas
 """,
         student=r"""
 def ablation_deltas(X, y, cols, n_folds=5):
-    full_ll = sb.cross_val_loglik(X, y, n_folds)
+    full_ll = cross_val_loglik(X, y, n_folds)
     deltas = {}
     for k, name in enumerate(cols):
         if name == "bias":
