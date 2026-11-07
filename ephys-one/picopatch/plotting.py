@@ -18,8 +18,12 @@ OPEN_COLOR = "tab:orange"
 # --------------------------------------------------------------------------- #
 # Kinetic schemes                                                              #
 # --------------------------------------------------------------------------- #
-def plot_scheme(ax, scheme, V=None, title=None):
-    """Draw a kinetic scheme as boxes and arrows; rates shown if ``V`` is given."""
+def plot_scheme(ax, scheme, V=None, title=None, rate_names=None):
+    """Draw a kinetic scheme as boxes and arrows; rates shown if ``V`` is given.
+
+    ``rate_names`` optionally names the rates, one ``(forward, backward)`` pair of
+    LaTeX strings per transition, e.g. ``[(r"\alpha", r"\beta")]`` -> "α = 150/s".
+    """
     from .kinetics import get_scheme
     scheme = get_scheme(scheme)
     n = scheme.n_states
@@ -43,8 +47,11 @@ def plot_scheme(ax, scheme, V=None, title=None):
             ax.annotate("", xy=(x0, -0.15), xytext=(x1, -0.15),
                         arrowprops=dict(arrowstyle="->", lw=1.5))
         if Q is not None:
-            ax.text((x0 + x1) / 2, 0.28, f"{Q[k, k+1]:.0f}/s", ha="center", va="bottom", fontsize=9)
-            ax.text((x0 + x1) / 2, -0.28, f"{Q[k+1, k]:.0f}/s", ha="center", va="top", fontsize=9)
+            f_name, b_name = rate_names[k] if rate_names is not None else (None, None)
+            f_lab = f"${f_name}$ = " if f_name else ""
+            b_lab = f"${b_name}$ = " if b_name else ""
+            ax.text((x0 + x1) / 2, 0.28, f"{f_lab}{Q[k, k+1]:.0f}/s", ha="center", va="bottom", fontsize=9)
+            ax.text((x0 + x1) / 2, -0.28, f"{b_lab}{Q[k+1, k]:.0f}/s", ha="center", va="top", fontsize=9)
     ax.set_xlim(xs[0] - 0.8, xs[-1] + 0.8); ax.set_ylim(-1.1, 0.9)
     ax.set_aspect("equal"); ax.axis("off")
     ax.set_title(title or scheme.name + (f"   at V = {V:g} mV" if V is not None else ""))

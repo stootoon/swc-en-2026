@@ -46,8 +46,9 @@ Nothing about the channel's history matters: it has no memory, just two coins.
 """,),
     code(r"""
 fig, ax = plt.subplots(figsize=(6, 2.6))
-pp.plotting.plot_scheme(ax, pp.two_state_fixed(alpha=150, beta=150),
-                        V=0, title="the two-state scheme: closed ⇌ open")
+pp.plotting.plot_scheme(ax, pp.two_state_fixed(alpha=150, beta=150), V=0,
+                        rate_names=[(r"\alpha", r"\beta")],
+                        title="the two-state scheme: closed ⇌ open")
 plt.show()
 """,),
     md(r"""
