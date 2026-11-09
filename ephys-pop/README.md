@@ -28,6 +28,8 @@ what the QC and scoring tools reveal.
 
 ## Run it locally
 
+> **Windows users:** the commands below are for macOS/Linux. See [WINDOWS.md](../WINDOWS.md) for the Windows version.
+
 ```bash
 cd ephys-pop
 python -m venv .venv && source .venv/bin/activate

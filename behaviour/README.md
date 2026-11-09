@@ -11,6 +11,8 @@ ground truth — the organizing question of the day is *"can we recover the trut
 
 ## Setup
 
+> **Windows users:** the commands below are for macOS/Linux. See [WINDOWS.md](../WINDOWS.md) for the Windows version.
+
 ```bash
 cd behaviour
 python3 -m venv .venv

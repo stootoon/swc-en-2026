@@ -31,6 +31,8 @@ allows. Notebook 8 scores the whole pipeline on three mystery patches.
 
 ## Run it locally
 
+> **Windows users:** the commands below are for macOS/Linux. See [WINDOWS.md](../WINDOWS.md) for the Windows version.
+
 ```bash
 cd ephys-one
 python -m venv .venv && source .venv/bin/activate

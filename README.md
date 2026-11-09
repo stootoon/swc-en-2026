@@ -20,6 +20,8 @@ git clone https://github.com/stootoon/swc-en-2026.git
 cd swc-en-2026/behaviour     # see behaviour/README.md for setup
 ```
 
+On Windows, follow [WINDOWS.md](WINDOWS.md) instead.
+
 ## Modules
 
 | module | topic |
