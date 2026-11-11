@@ -298,6 +298,7 @@ ex = gallery["l"]                                 # one gallery spike to take ap
 s1, s2 = scores[ex]
 fig = plt.figure(figsize=(14, 7.5))
 gs = fig.add_gridspec(4, 2, width_ratios=[0.7, 1.6])
+right_xlim = (-260, 330)                            # trim empty space on the right
 left = [fig.add_subplot(gs[i, 0]) for i in range(4)]
 for ax, y, col, name in [(left[0], mean_wave, "k", "mean waveform (µV)"),
                          (left[1], pc1, "tab:red", "PC1 (a shape; unit length)"),
@@ -322,19 +323,23 @@ for u in [0, 1]:
 right.scatter(*scores[ex], s=450, facecolor="none", edgecolor="tab:purple", lw=3,
               label="spike l, rebuilt at left", zorder=4)
 
-def mini_trace(ax, wave, at, color, dx, dy, width=80, height=50):
-    # Draw `wave` as a little trace at data position at + (dx, dy), tethered to `at`.
+def mini_trace(ax, wave, at, color, dx, dy, width=80, height=50, tether="start"):
+    # Draw `wave` as a little trace at data position at + (dx, dy), tethered to `at`
+    # from the trace's start or end, whichever is nearer.
     x = at[0] + dx + tt / tt[-1] * width
     y = at[1] + dy + wave / 200 * height                  # ±200 µV -> ±height
     ax.plot(x, y, color=color, lw=1.2, zorder=6)
-    ax.plot([at[0], x[0]], [at[1], y[0]], color=color, lw=0.6, ls=":", zorder=6)
+    k = 0 if tether == "start" else -1
+    ax.plot([at[0], x[k]], [at[1], y[k]], color=color, lw=0.6, ls=":", zorder=6)
 
 mini_trace(right, pair_example[0], pair_scores[0], ps.plotting.unit_color(0), dx=15, dy=-50)
 mini_trace(right, pair_example[1], pair_scores[1], ps.plotting.unit_color(1), dx=15, dy=30)
 mini_trace(right, waveforms[ex], scores[ex], "tab:purple", dx=20, dy=-70)
-for L, dx, dy in [("b", -95, 40), ("e", 50, -110), ("f", 40, 30)]:
-    mini_trace(right, waveforms[gallery[L]], scores[gallery[L]], "k", dx=dx, dy=dy)
+mini_trace(right, waveforms[gallery["b"]], scores[gallery["b"]], "k", dx=-105, dy=40, tether="end")
+mini_trace(right, waveforms[gallery["e"]], scores[gallery["e"]], "k", dx=-30, dy=-150)
+mini_trace(right, waveforms[gallery["f"]], scores[gallery["f"]], "k", dx=-30, dy=-80)
 
+right.set_xlim(*right_xlim)
 right.set_title("every spike as 2 numbers (s1, s2)"); right.set_xlabel("s1 (score on PC1)")
 right.set_ylabel("s2 (score on PC2)"); right.legend(loc="upper right", fontsize=8)
 plt.tight_layout(); plt.show()
