@@ -130,40 +130,11 @@ PC1 (red) points along the length of the cloud — the direction of greatest spr
 (orange) is the leftover, perpendicular direction. Describing each point by its PC1
 score alone throws away only the little bit of width in the PC2 direction.
 
-Our waveforms are points in **61 dimensions**, not two. Here they all are, stacked on
-top of each other, with four picked out to follow through the analysis: the
-**smallest** (A), the **largest** (B), and two of **typical size** that look the most
-different from each other (C and D), found by dividing each waveform by its amplitude
-and comparing what's left, which is pure shape.
-""",),
-    code(r"""
-waveforms = ps.peak_waveforms(snippets)          # (n_spikes, n_samples)
-
-# Four spikes to follow: the smallest, the largest, and the two most different-looking
-# spikes of (roughly) typical size.
-mid = np.where(np.abs(amplitude - np.median(amplitude)) < 0.1 * np.median(amplitude))[0]
-shape = waveforms[mid] / amplitude[mid, None]              # divide out size -> pure shape
-dist = ((shape[:, None] - shape[None, :]) ** 2).sum(-1)    # how different each pair is
-c, d = mid[list(np.unravel_index(dist.argmax(), dist.shape))]
-picks = {"A: smallest": int(amplitude.argmin()), "B: largest": int(amplitude.argmax()),
-         "C: typical size": int(c), "D: typical size, other shape": int(d)}
-pick_colors = ["tab:red", "tab:orange", "tab:green", "tab:purple"]
-
-tt = np.arange(waveforms.shape[1])
-plt.figure(figsize=(8, 4))
-plt.plot(tt, waveforms.T, color="0.6", lw=0.4, alpha=0.3)
-for (name, j), col in zip(picks.items(), pick_colors):
-    plt.plot(tt, waveforms[j], color=col, lw=2.2, label=name)
-plt.xlabel("sample"); plt.ylabel("µV"); plt.legend(fontsize=8)
-plt.title(f"all {len(waveforms)} peak-channel waveforms, {waveforms.shape[1]} samples each")
-plt.show()
-""",),
-    md(r"""
-PCA does exactly the same thing in 61 dimensions as in two: find the handful of axes
-of greatest spread, and describe each waveform by its position along them. Since the
-spikes of one neuron are near-copies, a couple of axes capture almost all the
-variation. Look at the **scree plot** — the fraction of variance each component
-explains:
+Our waveforms are points in **61 dimensions**, not two — but PCA does exactly the same
+thing: find the handful of axes of greatest spread, and describe each waveform by its
+position along them. Since the spikes of one neuron are near-copies, a couple of axes
+capture almost all the variation. Look at the **scree plot** — the fraction of variance
+each component explains:
 
 <details>
 <summary><b>▸ Go deeper: what PCA actually computes (optional)</b></summary>
@@ -195,6 +166,7 @@ rebuild it almost perfectly and the rest is noise.
 </details>
 """,),
     code(r"""
+waveforms = ps.peak_waveforms(snippets)          # (n_spikes, n_samples)
 ev = ps.explained_variance(waveforms, n_components=8)
 plt.figure(figsize=(5, 3.4))
 plt.bar(np.arange(1, 9), ev)
@@ -233,46 +205,37 @@ print("each of the", len(scores), "spikes is now just", scores.shape[1], "number
 """,
     ),
     md(r"""
-What *is* this "shape space"? **(left, middle)** what each axis means as a shape:
-start from the average waveform and move along PC1, or along PC2, to see the change
-each one controls. **(right)** every spike placed at its `(PC1, PC2)` — its whole
-61-sample waveform boiled down to two numbers — with our four picked spikes circled.
+What *is* this "shape space"? Two things worth seeing. **(left)** what the axes mean:
+start from the average waveform and move along PC1, or along PC2, to see the shape
+change each one controls. **(right)** every spike placed at its `(PC1, PC2)` — its
+whole 61-sample waveform boiled down to two numbers.
 """,),
     code(r"""
 pca = PCA(n_components=2).fit(waveforms)          # the same PCA as in the exercise
 components, mean_wave = pca.components_, pca.mean_  # shape modes and the average waveform
 tt = np.arange(waveforms.shape[1])
 
-fig, ax = plt.subplots(1, 3, figsize=(15, 4.2), width_ratios=[1, 1, 1.35])
-# (left, middle) what each PC means, as a shape: the mean waveform, nudged +/- along it
-for k in range(2):
-    step = 2 * scores[:, k].std()                 # a typical-sized move along this PC
-    ax[k].plot(tt, mean_wave, "k", lw=2.5, label="mean waveform")
-    ax[k].plot(tt, mean_wave + step * components[k], color="tab:blue", lw=1.3,
-               label=f"mean + 2 SD along PC{k+1}")
-    ax[k].plot(tt, mean_wave - step * components[k], color="tab:blue", lw=1.3, ls="--",
-               label=f"mean − 2 SD along PC{k+1}")
-    ax[k].set_title(f"PC{k+1}: {pca.explained_variance_ratio_[k]:.0%} of the variance")
-    ax[k].set_xlabel("sample"); ax[k].legend(fontsize=7)
-ax[0].set_ylabel("µV")
-# (right) every spike as a point in shape space, our four picks circled
-sc = ax[2].scatter(scores[:, 0], scores[:, 1], s=8, c=amplitude, cmap="viridis")
-plt.colorbar(sc, ax=ax[2], label="amplitude (µV)")
-for (name, j), col in zip(picks.items(), pick_colors):
-    ax[2].scatter(scores[j, 0], scores[j, 1], s=140, facecolor="none", edgecolor=col, lw=2.5)
-    ax[2].text(scores[j, 0], scores[j, 1], "  " + name[0], color=col, fontweight="bold", fontsize=12)
-ax[2].set_title("every spike as 2 numbers (its shape)"); ax[2].set_xlabel("PC1"); ax[2].set_ylabel("PC2")
+fig, ax = plt.subplots(1, 2, figsize=(11, 4))
+# (left) what each PC means, as a shape: the mean waveform, nudged +/- along each PC
+for k, col in [(0, "tab:red"), (1, "tab:green")]:
+    step = 2 * scores[:, k].std()
+    ax[0].plot(tt, mean_wave + step * components[k], color=col, lw=1, label=f"mean + PC{k+1}")
+    ax[0].plot(tt, mean_wave - step * components[k], color=col, lw=1, ls="--", label=f"mean − PC{k+1}")
+ax[0].plot(tt, mean_wave, "k", lw=2.5, label="mean waveform")
+ax[0].set_title("what the PC axes mean, as shapes"); ax[0].set_xlabel("sample")
+ax[0].set_ylabel("µV"); ax[0].legend(fontsize=7)
+# (right) every spike as a point in shape space
+sc = ax[1].scatter(scores[:, 0], scores[:, 1], s=8, c=amplitude, cmap="viridis")
+plt.colorbar(sc, ax=ax[1], label="amplitude (µV)")
+ax[1].set_title("every spike as 2 numbers (its shape)"); ax[1].set_xlabel("PC1"); ax[1].set_ylabel("PC2")
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
-Reading the first two panels: moving along **PC1** mostly scales the whole spike up and
-down — it captures **overall size**. **PC2** tweaks the **shape**: where the trough
-falls and how wide it is. Each spike is now a point in the right-hand plane, and our four picks land
-where they should: **A** (smallest) and **B** (largest) sit at opposite ends of PC1
-with the same PC2; **C** and **D**, the same size but different shapes, sit at
-opposite ends of PC2 with the same PC1.
+Reading the left panel: moving along **PC1** (red) mostly scales the whole spike up and
+down — it captures **overall size**. **PC2** (green) tweaks the **shape** (the width and
+rebound). Each spike is now a point in this plane.
 
-The spikes do fall into groups along **PC1** — but look at the colour:
+On the right, the spikes do fall into groups along **PC1** — but look at the colour:
 PC1 is essentially tracking **amplitude** (dark = small, yellow = large). So the
 separation you see along PC1 is the *same* separation amplitude already gave us, just
 relabelled. The genuinely *shape*-based axis is **PC2**, and here it barely separates
