@@ -211,14 +211,49 @@ print("correlogram ready")
     md(r"""
 ## 3. The two readings: chance, and the refractory hole
 
-Two toy trains make the readings concrete: a purely **random** (Poisson) train, and one
-with a **refractory period** enforced (no spike within 2 ms of the last). We use lots of
-spikes so the histograms are smooth.
+Two toy trains make the readings concrete. First a purely **random** (Poisson) train:
+spikes dropped at random times with no rule at all. We use lots of spikes so the
+histograms are smooth.
 """,),
     code(r"""
 rng = np.random.default_rng(1)
 T_toy, rate_toy = 200.0, 20.0                                   # 200 s at 20 Hz -> ~4000 spikes
 random_train = np.sort(rng.integers(0, int(T_toy * fs), int(rate_toy * T_toy)))
+
+def show_train(train, color, title):
+    # raster of the first 2 s, and the histogram of gaps between consecutive spikes
+    fig, ax = plt.subplots(1, 2, figsize=(12, 2.6), width_ratios=[2, 1])
+    ax[0].eventplot(train / fs, colors=color, lineoffsets=0, linelengths=1)
+    ax[0].set_xlim(0, 2); ax[0].set_yticks([]); ax[0].set_xlabel("time (s)"); ax[0].set_title(title)
+    ax[1].hist(np.diff(train) / fs * 1e3, bins=np.arange(0, 20.5, 0.5), color=color)
+    ax[1].axvspan(0, 2, color="tab:red", alpha=0.15)
+    ax[1].set_xlabel("gap to the next spike (ms)"); ax[1].set_title("gaps between consecutive spikes")
+    plt.tight_layout(); plt.show()
+
+show_train(random_train, "k", f"a random (Poisson) train: {len(random_train)} spikes in {T_toy:.0f} s (first 2 s)")
+""",),
+    md(r"""
+With no rule, the shortest gaps are as common as any other: plenty of spikes fall
+within 2 ms of the previous one (the red zone is full). Its auto-correlogram,
+with the **chance level** marked (the count you'd expect in any bin if spikes had no
+relationship at all, $N\lambda\Delta$):
+""",),
+    code(r"""
+bin_ms = 0.5
+expected = len(random_train) * (len(random_train) / T_toy) * (bin_ms / 1000)   # N·λ·Δ
+
+plt.figure(figsize=(6, 3.4))
+c, n = correlogram(random_train, random_train, fs, bin_ms=bin_ms, exclude_zero=True)
+plt.bar(c, n, width=bin_ms * 0.9, color="0.5")
+plt.axhline(expected, color="tab:red", lw=2, label=f"chance = N·λ·Δ ≈ {expected:.0f}")
+plt.title("random (Poisson) train: flat"); plt.xlabel("lag (ms)"); plt.ylabel("count"); plt.legend(fontsize=8)
+plt.show()
+""",),
+    md(r"""
+Now the same thing with one rule added: a **refractory period**. We take the random
+train and delete any spike that falls within 2 ms of the previous one.
+""",),
+    code(r"""
 refr = int(0.002 * fs)                                          # 2 ms refractory period
 keep = [random_train[0]]
 for t in random_train[1:]:
@@ -226,19 +261,21 @@ for t in random_train[1:]:
         keep.append(t)
 refractory_train = np.array(keep)
 
-bin_ms = 0.5
-expected = len(random_train) * (len(random_train) / T_toy) * (bin_ms / 1000)   # N·λ·Δ
-
-fig, ax = plt.subplots(1, 2, figsize=(11, 3.4), sharey=True)
-c, n = correlogram(random_train, random_train, fs, bin_ms=bin_ms, exclude_zero=True)
-ax[0].bar(c, n, width=bin_ms * 0.9, color="0.5")
-ax[0].axhline(expected, color="tab:red", lw=2, label=f"chance = N·λ·Δ ≈ {expected:.0f}")
-ax[0].set_title("random (Poisson) — flat"); ax[0].set_xlabel("lag (ms)"); ax[0].set_ylabel("count"); ax[0].legend(fontsize=8)
+show_train(refractory_train, "tab:green",
+           f"the same train with a 2 ms refractory period: {len(refractory_train)} spikes (first 2 s)")
+""",),
+    md(r"""
+The raster looks the same at this scale, but the gap histogram shows the rule: the
+red zone is now empty. And *its* auto-correlogram:
+""",),
+    code(r"""
+plt.figure(figsize=(6, 3.4))
 c, n = correlogram(refractory_train, refractory_train, fs, bin_ms=bin_ms, exclude_zero=True)
-ax[1].bar(c, n, width=bin_ms * 0.9, color="tab:green")
-ax[1].axvspan(-1.5, 1.5, color="tab:red", alpha=0.12)
-ax[1].set_title("with 2 ms refractory period — hole at 0"); ax[1].set_xlabel("lag (ms)")
-plt.tight_layout(); plt.show()
+plt.bar(c, n, width=bin_ms * 0.9, color="tab:green")
+plt.axvspan(-1.5, 1.5, color="tab:red", alpha=0.12)
+plt.axhline(expected, color="tab:red", lw=2, label="chance level from before")
+plt.title("with a 2 ms refractory period: hole at 0"); plt.xlabel("lag (ms)"); plt.ylabel("count")
+plt.legend(fontsize=8); plt.show()
 """,),
     md(r"""
 The **random** train's auto-correlogram is **flat**, hugging the red **chance line**
