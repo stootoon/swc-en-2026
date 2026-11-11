@@ -138,8 +138,20 @@ there, and *where does each spike belong?*
 
 ## 2. How many units? The BIC
 
-Clustering needs to know how many clusters to look for, and we don't — that's part of
-what we're trying to discover. First, see what goes wrong when you guess:
+Now the real thing. Here are our spikes in the **depth–amplitude feature space** from
+Notebook 4 — the pile we have to cluster, with no labels:
+""",),
+    code(r"""
+plt.figure(figsize=(5.5, 4.5))
+plt.scatter(depth, amplitude, s=10, color="0.5")
+plt.title(f"{len(depth)} detected spikes, unlabelled")
+plt.xlabel("depth (µm)"); plt.ylabel("amplitude (µV)"); plt.show()
+""",),
+    md(r"""
+On the toy we told the mixture to look for three blobs. Here, how many? You can count
+clouds by eye, but a computer can't, and on messier data neither can you — the
+number of units is part of what we're trying to discover. First, see what goes wrong
+when you guess:
 """,),
     code(r"""
 fig, ax = plt.subplots(1, 3, figsize=(13, 4), sharex=True, sharey=True)
