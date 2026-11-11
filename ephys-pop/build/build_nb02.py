@@ -386,7 +386,8 @@ a toy of 8 channels of noise with one big spike on channel 0:
     code(r"""
 rng = np.random.default_rng(0)
 toy = rng.normal(0, 1.0, size=(300, 8))
-toy[150, 0] += 40                               # a big spike, on channel 0 only
+k = np.arange(300)
+toy[:, 0] += 40 * np.exp(-((k - 150) / 2.0) ** 2)   # a big spike (a few samples wide) on channel 0 only
 
 plt.figure(figsize=(9, 3.4))
 for c in range(8):
@@ -399,7 +400,8 @@ plt.xlabel("sample"); plt.yticks([]); plt.show()
 """,),
     md(r"""
 Channel 0 (green) has the spike; channel 3 (purple), like the others, is just noise.
-Now form the across-channel reference two ways and look at what each does. The **mean**
+Now form the across-channel reference two ways and look at what each does, zooming in
+around sample 150. The **mean**
 reference itself carries a bump at sample 150 (channel 0's spike dragged it up); the
 **median** reference is flat.
 """,),
@@ -418,8 +420,10 @@ ax[0].set_xlabel("sample"); ax[0].set_ylabel("value")
 ax[1].plot(toy[:, 3] - mean_ref_signal, color="tab:red", label="ch 3 after MEAN reference")
 ax[1].plot(toy[:, 3] - median_ref_signal, color="tab:blue", label="ch 3 after MEDIAN reference")
 ax[1].axvline(150, color="0.7", ls="--"); ax[1].legend(fontsize=8)
-ax[1].set_title("channel 3 — the mean injects a fake dip; the median leaves it clean")
+ax[1].set_title("channel 3 — the mean injects a fake dip, the median does not")
 ax[1].set_xlabel("sample")
+for a in ax:
+    a.set_xlim(120, 180)                                 # zoom in around the spike
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
