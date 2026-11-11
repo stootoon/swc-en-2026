@@ -76,6 +76,11 @@ def plot_footprint(template, probe, ax=None):
     return ax
 
 
+def channel_colors(channels):
+    """One colour per channel, striding through tab10 so neighbours contrast strongly."""
+    return [plt.cm.tab10((3 * int(k)) % 10) for k in channels]
+
+
 def plot_unit_spike(recording, unit, which=0, n_channels=13, pad_ms=(6.0, 8.0),
                     ax=None, title=None):
     """Zoom in on one ground-truth spike of ``unit``, on the channel band around it.
@@ -91,8 +96,7 @@ def plot_unit_spike(recording, unit, which=0, n_channels=13, pad_ms=(6.0, 8.0),
     lo = max(0, pc - n_channels // 2)
     hi = min(recording.n_channels, lo + n_channels)
     others = gt.spike_times[gt.spike_labels != unit]
-    # stride through tab10 so neighbouring channels get strongly contrasting colours
-    colors = [plt.cm.tab10((3 * k) % 10) for k in range(lo, hi)]
+    colors = channel_colors(range(lo, hi))
     ax = plot_traces(recording, channels=range(lo, hi),
                      t0=(t_spk - pad_ms[0] * 1e-3 * fs) / fs,
                      t1=(t_spk + pad_ms[1] * 1e-3 * fs) / fs,

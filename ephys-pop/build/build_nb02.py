@@ -783,9 +783,11 @@ print("whitened:", whitened.shape, " filtered:", filtered.shape)
 gt = rec.ground_truth
 u = int(np.argmax(gt.unit_amplitude)); t = gt.spike_times[gt.spike_labels == u][5]
 pc = ps.peak_channel(gt.templates[u]); lo = max(0, pc - 6)
-ps.plotting.plot_signal(whitened, rec.fs, channels=range(lo, lo + 13),
+chans = range(lo, lo + 13)
+ps.plotting.plot_signal(whitened, rec.fs, channels=chans,
                         t0=(t - 200) / rec.fs, t1=(t + 250) / rec.fs,
-                        title="a spike in the whitened traces")
+                        mark_spikes=[t], colors=ps.plotting.channel_colors(chans), highlight=pc,
+                        title=f"the same spike (unit {u}, peak channel {pc}) in the whitened traces")
 plt.show()
 """,),
     md(r"""
