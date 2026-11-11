@@ -64,6 +64,34 @@ plt.title(f"unit {u}'s spike train — each tick is one spike (first 5 s)")
 plt.show()
 """,),
     md(r"""
+Why would spike *timing* help us judge the sorting? Because a neuron obeys one hard
+rule: after it fires, it needs a millisecond or two to recover — the **refractory
+period** — before it can fire again. So in a single neuron's spike train, **no two
+spikes are ever closer than that.** Check it on unit `u`: the histogram of gaps
+between consecutive spikes.
+""",),
+    code(r"""
+gaps_ms = np.diff(t_u) / fs * 1e3                    # gap between each spike and the next
+plt.figure(figsize=(8, 3))
+plt.hist(gaps_ms, bins=np.arange(0, 20.5, 0.5), color="0.4")
+plt.axvspan(0, 1.5, color="tab:red", alpha=0.15)
+plt.xlabel("gap to the next spike (ms)"); plt.ylabel("count")
+plt.title(f"unit {u}: gaps between consecutive spikes — nothing below ~1.5 ms (red)")
+plt.show()
+""",),
+    md(r"""
+The red zone is empty. That gives us a test. Suppose a sorter had split one neuron
+into two units, **A** and **B**. Each would still have no short gaps on its own, so
+each would look like a tidy neuron. But now look at the gaps *between* an A spike and
+the nearest B spike. If A and B are really the **same** neuron, those gaps can't be
+short either — the refractory rule applies to the neuron, not to our labels. If A and
+B are **different** neurons, they fire independently, and now and then one will fire
+within a millisecond of the other: no empty zone.
+
+So "are A and B the same neuron?" becomes "are there any short A-to-B gaps?" The tool
+that counts the gaps between two spike trains — at every separation, not just the
+shortest — is the **correlogram**. Let's build it.
+
 ## 2. Building a correlogram: slide one train past the other
 
 To compare two spike trains A and B, we ask: **at a given lag $\tau$, how many spikes
