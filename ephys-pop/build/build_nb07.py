@@ -9,18 +9,26 @@ cells = [
 
 *SWC ENC 2026 · ephys-pop module*
 
-A sorter's raw output is rarely final. A common error is **over-splitting**: one neuron
-gets divided into two "units" (say its bigger and smaller spikes fall in different
-clusters). We need to catch that and **merge** them. The tools are spike **timing** and
-spike **shape** — and we'll build the timing tool, the **correlogram**, from the ground
-up.
+A sorter's raw output is rarely final. There are two ways it can be wrong about *which
+spikes belong together*:
+
+1. **Merging:** two different neurons end up in one unit.
+2. **Splitting:** one neuron ends up as two units (say its bigger and smaller spikes
+   fall in different clusters).
+
+Both leave a fingerprint in spike **timing** — in the gaps between spikes — and this
+notebook builds the tool that reads it, the **correlogram**, from the ground up. A
+merge shows up when a unit is compared with *itself* (the **auto-correlogram**); a
+split shows up when two units are compared with *each other* (the
+**cross-correlogram**). Spike **shape** gives a second opinion.
 
 **In this notebook you will:**
-1. See a unit as a **spike train**, and build a **correlogram** by sliding one train past
-   another.
-2. Compare a train with itself — the **auto-correlogram** — and learn its two key
-   readings: a flat *chance* level, and the **refractory hole**.
-3. Diagnose an **over-split** and merge it; and see when *not* to merge.
+1. See a unit as a **spike train**, meet the **refractory rule**, and see how each error
+   violates it.
+2. Build a **correlogram** by sliding one train past another.
+3. Use the **auto-correlogram** to catch a *merge*.
+4. Use the **cross-correlogram** (and template shape) to catch a *split*, and check that
+   two genuinely different units pass.
 
 *(For well-populated correlograms we use the **true** spike trains here — we know them,
 and there are plenty. On real data you'd run these identical checks on your sorted units.)*
@@ -81,8 +89,19 @@ plt.title(f"unit {u}: gaps between consecutive spikes — nothing below ~1.5 ms 
 plt.show()
 """,),
     md(r"""
-The red zone is empty. That gives us a test. Suppose a sorter has handed us two units,
-**A** and **B**. Here are their spike trains (a toy, a few spikes each, times in ms):
+The red zone is empty. That is the rule each sorting error breaks:
+
+- **A merge** puts two neurons' spikes into one train. The two neurons fire
+  independently, so now and then one fires within a millisecond of the other — and the
+  merged train has short gaps a single neuron could never produce. *Look at the gaps
+  within one unit.*
+- **A split** puts one neuron's spikes into two trains. Each half looks tidy on its own,
+  but the gaps *between* an A spike and the nearest B spike can't be short either — the
+  refractory rule applies to the neuron, not to our labels. Two genuinely different
+  units would show no such gap. *Look at the gaps between two units.*
+
+Take the split case as a toy. A sorter hands us two units, **A** and **B**; here are
+their spike trains (a few spikes each, times in ms):
 """,),
     code(r"""
 A = np.array([5, 14, 22, 31, 40, 48, 56], float)     # unit A's spike times (ms)
@@ -96,16 +115,11 @@ plt.title("two units from the sorter — are they the same neuron?")
 plt.show()
 """,),
     md(r"""
-Each has no short gaps on its own, so each looks like a tidy neuron. Are they one
-neuron that the sorter split in two, or two different neurons? Look at the gaps
-*between* an A spike and the nearest B spike. If A and B are really the **same**
-neuron, those gaps can't be short either — the refractory rule applies to the neuron,
-not to our labels. If A and B are **different** neurons, they fire independently, and
-now and then one will fire within a millisecond of the other: no empty zone.
-
-So "are A and B the same neuron?" becomes "are there any short A-to-B gaps?" The tool
-that counts the gaps between two spike trains — at every separation, not just the
-shortest — is the **correlogram**. Let's build it.
+Each has no short gaps on its own. Are they one neuron that the sorter split in two,
+or two different neurons? The question is "are there any short A-to-B gaps?" — and the
+same question, asked of a unit against itself, catches a merge. The tool that counts
+the gaps between two spike trains, at every separation and not just the shortest, is
+the **correlogram**. Let's build it.
 
 ## 2. Building a correlogram: slide one train past the other
 
@@ -208,13 +222,13 @@ print("correlogram ready")
 """,
     ),
     md(r"""
-## 3. The auto-correlogram: a train against itself
+## 3. The auto-correlogram: catching a merge
 
-So far we compared two different trains. Compare a train with **itself** — slide a copy
-of A past A — and you get the **auto-correlogram**: the distribution of gaps between a
-unit's *own* spikes. (We skip lag 0, where every spike trivially lines up with itself.)
-This is the tool for the question we started with: does this unit respect the
-refractory period? Its two key readings are a flat **chance** level and the
+Compare a train with **itself** — slide a copy of A past A — and you get the
+**auto-correlogram**: the distribution of gaps between a unit's *own* spikes. (We skip
+lag 0, where every spike trivially lines up with itself.) This is the view that catches
+a **merge**: a single neuron must show an empty zone at short lags, and a merged pair
+of neurons won't. Its two key readings are a flat **chance** level and the
 **refractory hole**, and two toy trains make them concrete.
 
 First a purely **random** (Poisson) train: spikes dropped at random times with no rule
@@ -299,9 +313,34 @@ plt.tight_layout(); plt.show()
 print(f"unit {u}: refractory violations = {ps.refractory_violations(t_u, fs):.3f}")
 """,),
     md(r"""
-Unit `u` has the refractory hole — a single, clean neuron.
+Unit `u` has the refractory hole — a single, clean neuron. Now manufacture a **merge**:
+pour the spikes of a second neuron, unit `u2`, into unit `u`'s train and treat the
+result as one unit. Its auto-correlogram next to the clean one:
+""",),
+    code(r"""
+u2 = int([v for v in np.unique(labels) if v != u][0])
+t_u2 = times[labels == u2]
+merged = np.sort(np.concatenate([t_u, t_u2]))       # two neurons wrongly in one unit
 
-## 4. Catching an over-split
+fig, ax = plt.subplots(1, 2, figsize=(11, 3.6), sharey=True)
+c, n = correlogram(t_u, t_u, fs, bin_ms=1.0, exclude_zero=True)
+ps.plotting.plot_correlogram(c, n, ax=ax[0], title=f"unit {u} alone: hole at 0")
+c, n = correlogram(merged, merged, fs, bin_ms=1.0, exclude_zero=True)
+ps.plotting.plot_correlogram(c, n, ax=ax[1], color="tab:red",
+                             title=f"units {u} + {u2} merged into one: the hole fills in")   # partly: see text
+plt.tight_layout(); plt.show()
+print(f"refractory violations:  unit {u} alone = {ps.refractory_violations(t_u, fs):.3f}   "
+      f"merged = {ps.refractory_violations(merged, fs):.3f}")
+""",),
+    md(r"""
+The merged unit's hole is **half filled in**. Each neuron's own spike pairs still
+respect the rule, but a spike of one neuron next to a spike of the other does not, and
+those cross pairs land in the zone a single neuron leaves empty. The more foreign
+spikes a unit contains, the fuller the hole: a unit whose auto-correlogram lacks a
+clean hole is **contaminated** — it holds more than one neuron, or noise — and should
+be split or discarded.
+
+## 4. The cross-correlogram: catching a split
 
 Real sorters often *over*-cluster on purpose and merge afterwards — splitting is easy to
 undo, un-merging a true collision is not. Let's manufacture the classic mistake: split
@@ -324,8 +363,11 @@ print(f"A: {len(tA)} spikes,  B: {len(tB)} spikes")
 """,),
     md(r"""
 A and B ticks are never on top of each other — they can't be, being one neuron. The
-**cross-correlogram** (A vs B) makes that quantitative: it inherits the **refractory
-hole**. And because A and B are the same neuron, their **templates** are nearly
+**cross-correlogram** (A against B) makes that quantitative: it inherits the
+**refractory hole**. One caution: a hole here is not proof on its own, because the
+detector can't see two spikes landing at the same instant, so even two different
+neurons can show a shallow dip at lag 0. That's why we add a second opinion from
+**shape**: because A and B are the same neuron, their **templates** are nearly
 identical. The data behind both tests:
 """,),
     code(r"""
@@ -345,16 +387,14 @@ print(f"template similarity A vs B = {simAB:.3f}  (near 1 -> same neuron -> MERG
 Both tests agree — the cross-correlogram has the refractory hole and the templates lie on
 top of each other. A and B are one neuron, over-split: **merge them.**
 
-## 5. Don't over-merge: two genuinely different units
+## 5. The control: two genuinely different units
 
-The same tests must say *no* for two *different* neurons. Take unit `u` and another unit
-`u2`. **Again, start with the spike trains** — now unrelated, and they *do* occasionally
-coincide (independent neurons fire together by chance):
+The same tests must say *no* for two *different* neurons, or we'd merge everything.
+Take unit `u` and unit `u2` from section 3. **Again, start with the spike trains** —
+unrelated, and they *do* occasionally coincide (independent neurons fire together by
+chance):
 """,),
     code(r"""
-u2 = int([v for v in np.unique(labels) if v != u][0])
-t_u2 = times[labels == u2]
-
 plt.figure(figsize=(11, 1.8))
 plt.eventplot([t_u2 / fs, t_u / fs], colors=["tab:red", "k"], lineoffsets=[0, 1], linelengths=0.8)
 plt.xlim(20, 24); plt.yticks([0, 1], [f"unit {u2}", f"unit {u}"]); plt.xlabel("time (s)")
@@ -406,9 +446,16 @@ increasingly, behind its automated merge steps.
 
 ## Wrap-up
 
-Timing and shape statistics — the correlogram, the refractory period, template
-similarity — let you audit a sort with no ground truth in sight: catch over-splits, merge
-them, and flag contaminated units.
+Two errors, one rule, two views of it:
+
+| error | what the gaps show | where you see it |
+|---|---|---|
+| **merge** (two neurons in one unit) | short gaps appear: no refractory hole | the unit's **auto-correlogram** |
+| **split** (one neuron in two units) | no short gaps between the two: a hole | their **cross-correlogram** (+ matching templates) |
+
+Two genuinely different units show a hole in each auto-correlogram and none in their
+cross-correlogram. These timing and shape statistics let you audit a sort with no
+ground truth in sight: flag contaminated units, catch over-splits, and merge them.
 
 **Next (Notebook 8 — scoring):** the one thing we *can* do because our data is synthetic —
 grade the whole sort against the truth.
