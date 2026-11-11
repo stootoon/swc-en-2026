@@ -18,7 +18,8 @@ in Notebook 6.
 **In this notebook you will:**
 1. Decide **how many units** there are, using the BIC.
 2. **Cluster** the spikes with a Gaussian mixture.
-3. Average each cluster into a **template** and check it against the truth.
+3. **Check** the clusters by eye in the full waveform space with t-SNE.
+4. Average each cluster into a **template** and check it against the truth.
 """,),
     code(r"""
 import matplotlib.pyplot as plt, picosort as ps
@@ -274,10 +275,13 @@ plt.show()
 """,
     ),
     md(r"""
-The six clusters match the six blobs by eye. But we clustered on just two features
-(depth, amplitude) — how do we know these are *really* six distinct neurons, and not
-(say) one neuron artificially split? A good check is to look at the clusters in the
-**full waveform space**: every spike's complete multichannel snippet (~2000 numbers),
+The six clusters match the six blobs by eye.
+
+## 4. Visualising the clusters with t-SNE
+
+We clustered on just two features (depth, amplitude) — how do we know these are
+*really* six distinct neurons, and not (say) one neuron artificially split? A good
+check is to look at the clusters in the **full waveform space**: every spike's complete multichannel snippet (~2000 numbers),
 where two genuinely different neurons should differ in *many* ways at once.
 
 We can't plot 2000 dimensions, so we squash them to 2-D — and *which* squashing matters.
@@ -378,7 +382,7 @@ Remember the toys, though: the gaps between islands and their sizes mean nothing
 lumps can appear on their own. Use t-SNE to eyeball separation, never as proof on its
 own.
 
-## 4. From clusters to templates
+## 5. From clusters to templates
 
 A **template** is the average of a cluster's snippets — the same noise-averages-away
 trick from Notebook 1, but now with clusters we *discovered* instead of labels we
@@ -415,7 +419,7 @@ plt.show()
 """,
     ),
     md(r"""
-## 5. Did we recover the real units?
+## 6. Did we recover the real units?
 
 Because this is synthetic data, we can check. Match each learned template to the
 true template it most resembles and compare their shapes — they should be nearly
