@@ -387,28 +387,31 @@ plt.tight_layout(); plt.show()
 In the **PCA** projection several clusters pile up in the middle — the linear map can't
 pull them apart. In the **t-SNE** map each colour sits in its own island, so the two
 views agree: no cluster looks merged, none looks split. Now see what a *disagreement*
-looks like. Cluster with **k = 9** instead — too many, as the BIC told us — and colour
-the same t-SNE map by those labels:
+looks like. Cluster with **k = 3** and **k = 9** instead — too few and too many, as the
+BIC told us, and the same fits as in section 2 — and colour the same t-SNE map by
+those labels:
 """,),
     code(r"""
-labels9 = GaussianMixture(9, n_init=10, random_state=0).fit_predict(features)
-
-fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
-for u in np.unique(labels9):
-    m = labels9 == u
-    axes[0].scatter(depth[m], amplitude[m], s=10, color=ps.plotting.unit_color(int(u)))
-    axes[1].scatter(emb[m, 0], emb[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
-axes[0].set_title("k = 9 clusters in depth–amplitude"); axes[0].set_xlabel("depth (µm)")
-axes[0].set_ylabel("amplitude (µV)")
-axes[1].set_title("the same t-SNE map, coloured by the k = 9 labels")
-axes[1].set_xticks([]); axes[1].set_yticks([])
+fig, axes = plt.subplots(2, 2, figsize=(11, 8.5))
+for row, k in zip(axes, [3, 9]):
+    lab_k = GaussianMixture(k, n_init=5, random_state=0).fit_predict(features)   # as in section 2
+    for u in np.unique(lab_k):
+        m = lab_k == u
+        row[0].scatter(depth[m], amplitude[m], s=10, color=ps.plotting.unit_color(int(u)))
+        row[1].scatter(emb[m, 0], emb[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
+    row[0].set_title(f"k = {k} clusters in depth–amplitude"); row[0].set_ylabel("amplitude (µV)")
+    row[1].set_title(f"the same t-SNE map, coloured by the k = {k} labels")
+    row[1].set_xticks([]); row[1].set_yticks([])
+axes[1, 0].set_xlabel("depth (µm)")
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
-The map itself hasn't changed — only the colours have. Now some islands carry **two
-colours**: the k = 9 clustering split those units in two, and the waveform view says
-the halves are not separable. That is the signal t-SNE is good for. The reverse case,
-one colour spread over two islands, would flag a merge.
+The map itself never changes — only the colours do. With **k = 3**, one colour is
+spread over **two or three separate islands**: that cluster lumps together neurons the
+waveform view keeps well apart, so it should be split. With **k = 9**, some islands
+carry **two interleaved colours**: those units were cut in two, and the waveform view
+says the halves are not separable, so they should be merged. Those two patterns are
+what t-SNE is good for.
 
 Remember the toys, though: the gaps between islands and their sizes mean nothing, and
 lumps can appear on their own. Use t-SNE to look for disagreements with your
