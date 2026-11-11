@@ -126,10 +126,18 @@ def sliding_correlation(trace, template):
 
 raw = sliding_correlation(noisy, shape)
 corr_x = np.arange(len(raw)) + trough          # align the output to the spike's trough
-plt.figure(figsize=(9, 2.6))
-plt.plot(corr_x, raw, "tab:blue"); plt.axvline(loc0, color="tab:red", ls="--"); plt.xlim(0, 500)
-plt.title("(4) the sliding correlation peaks exactly where the spike is buried")
-plt.xlabel("position (sample)"); plt.show()
+
+fig, ax = plt.subplots(2, 1, figsize=(9, 5), sharex=True)
+ax[0].plot(noisy, "k", lw=0.7); ax[0].axvline(loc0, color="tab:red", ls="--")
+ax[1].plot(corr_x, raw, "tab:blue"); ax[1].axvline(loc0, color="tab:red", ls="--")
+for i, col in zip([80, start, 380], ["tab:purple", "tab:green", "tab:orange"]):   # three window positions
+    ax[0].axvspan(i, i + Lw, color=col, alpha=0.15)
+    ax[0].plot(np.arange(i, i + Lw), shape, color=col, lw=1.5)                     # the template, in that window
+    ax[1].plot(i + trough, raw[i], "o", color=col, ms=8)                            # the value that window gives
+ax[0].set_title("(2) the noisy trace, with the template drawn at three of its sliding positions")
+ax[1].set_title("(4) the sliding correlation: one value per window; it peaks where the spike is buried")
+ax[1].set_xlabel("position (sample)"); ax[1].set_xlim(0, 500)
+plt.tight_layout(); plt.show()
 """,
         student=r"""
 def sliding_correlation(trace, template):
@@ -140,10 +148,18 @@ def sliding_correlation(trace, template):
 
 raw = sliding_correlation(noisy, shape)
 corr_x = np.arange(len(raw)) + trough          # align the output to the spike's trough
-plt.figure(figsize=(9, 2.6))
-plt.plot(corr_x, raw, "tab:blue"); plt.axvline(loc0, color="tab:red", ls="--"); plt.xlim(0, 500)
-plt.title("(4) the sliding correlation peaks exactly where the spike is buried")
-plt.xlabel("position (sample)"); plt.show()
+
+fig, ax = plt.subplots(2, 1, figsize=(9, 5), sharex=True)
+ax[0].plot(noisy, "k", lw=0.7); ax[0].axvline(loc0, color="tab:red", ls="--")
+ax[1].plot(corr_x, raw, "tab:blue"); ax[1].axvline(loc0, color="tab:red", ls="--")
+for i, col in zip([80, start, 380], ["tab:purple", "tab:green", "tab:orange"]):   # three window positions
+    ax[0].axvspan(i, i + Lw, color=col, alpha=0.15)
+    ax[0].plot(np.arange(i, i + Lw), shape, color=col, lw=1.5)                     # the template, in that window
+    ax[1].plot(i + trough, raw[i], "o", color=col, ms=8)                            # the value that window gives
+ax[0].set_title("(2) the noisy trace, with the template drawn at three of its sliding positions")
+ax[1].set_title("(4) the sliding correlation: one value per window; it peaks where the spike is buried")
+ax[1].set_xlabel("position (sample)"); ax[1].set_xlim(0, 500)
+plt.tight_layout(); plt.show()
 """,
     ),
     md(r"""
