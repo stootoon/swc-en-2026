@@ -22,6 +22,10 @@ peeling them off one at a time, so overlapping spikes are separated.
    the collision come apart.
 """,),
     code(r"""
+import matplotlib.pyplot as plt, picosort as ps
+ps.plotting.draw_pipeline(highlight=6); plt.show()      # where we are in the pipeline
+""",),
+    code(r"""
 import numpy as np
 import matplotlib.pyplot as plt
 import picosort as ps

@@ -341,22 +341,31 @@ def draw_spike_on_probe(ax=None, n_channels=11, pitch=25.0, unit_depth=140.0):
     return ax
 
 
-def draw_pipeline(ax=None):
-    """A left-to-right flow of the picosort stages, one box per notebook."""
+def draw_pipeline(ax=None, highlight=None):
+    """A left-to-right flow of the picosort stages, one box per notebook.
+
+    ``highlight`` is a notebook number (1-8); that stage is drawn in yellow.
+    """
     import matplotlib.patches as mpatches
     if ax is None:
         _, ax = plt.subplots(figsize=(12, 2.2))
     stages = ["raw\nvoltage", "preprocess\n(NB2)", "detect\n(NB3)", "features\n(NB4)",
               "cluster\n(NB5)", "template\nmatch (NB6)", "merge/QC\n(NB7)", "score\n(NB8)"]
+    stages[0] = "raw\nvoltage (NB1)"
     colors = ["0.85"] + ["#dCE8f5"] * 6 + ["#d6f0d6"]
     for i, (s, col) in enumerate(zip(stages, colors)):
+        here = highlight is not None and i == highlight - 1
         ax.add_patch(mpatches.FancyBboxPatch(
             (i * 1.5, 0), 1.2, 1.0, boxstyle="round,pad=0.02,rounding_size=0.12",
-            facecolor=col, edgecolor="0.4"))
-        ax.text(i * 1.5 + 0.6, 0.5, s, ha="center", va="center", fontsize=8.5)
+            facecolor="#ffe867" if here else col, edgecolor="k" if here else "0.4",
+            linewidth=1.8 if here else 1.0))
+        ax.text(i * 1.5 + 0.6, 0.5, s, ha="center", va="center", fontsize=8.5,
+                fontweight="bold" if here else "normal")
         if i < len(stages) - 1:
             ax.annotate("", xy=(i * 1.5 + 1.42, 0.5), xytext=(i * 1.5 + 1.2, 0.5),
                         arrowprops=dict(arrowstyle="->", color="0.4"))
     ax.set_xlim(-0.2, len(stages) * 1.5); ax.set_ylim(-0.2, 1.2)
-    ax.axis("off"); ax.set_title("the picosort pipeline", fontsize=11)
+    ax.axis("off")
+    ax.set_title("the picosort pipeline" + (f" — you are here: notebook {highlight}" if highlight else ""),
+                 fontsize=11)
     return ax

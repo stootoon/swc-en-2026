@@ -23,6 +23,10 @@ graded against it.
    whole pipeline's logic.
 """,),
     code(r"""
+import matplotlib.pyplot as plt, picosort as ps
+ps.plotting.draw_pipeline(highlight=1); plt.show()      # where we are in the pipeline
+""",),
+    code(r"""
 import numpy as np
 import matplotlib.pyplot as plt
 import picosort as ps

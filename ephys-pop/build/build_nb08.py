@@ -26,6 +26,10 @@ and turn those into **recall**, **precision**, and an overall **agreement** scor
 3. **Stress-test** the sorter and watch the scores reveal where it breaks.
 """,),
     code(r"""
+import matplotlib.pyplot as plt, picosort as ps
+ps.plotting.draw_pipeline(highlight=8); plt.show()      # where we are in the pipeline
+""",),
+    code(r"""
 import numpy as np
 import matplotlib.pyplot as plt
 import picosort as ps

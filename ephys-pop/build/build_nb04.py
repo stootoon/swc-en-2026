@@ -23,6 +23,10 @@ within a unit. Three natural ones:
 3. Use **PCA** to capture waveform shape — and see when you need it.
 """,),
     code(r"""
+import matplotlib.pyplot as plt, picosort as ps
+ps.plotting.draw_pipeline(highlight=4); plt.show()      # where we are in the pipeline
+""",),
+    code(r"""
 import numpy as np
 import matplotlib.pyplot as plt
 import picosort as ps

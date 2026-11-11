@@ -29,6 +29,10 @@ from scratch before using them. By the end you will have:
    **whitened** it — with a geometric picture of what whitening actually does.
 """,),
     code(r"""
+import matplotlib.pyplot as plt, picosort as ps
+ps.plotting.draw_pipeline(highlight=2); plt.show()      # where we are in the pipeline
+""",),
+    code(r"""
 import numpy as np
 import matplotlib.pyplot as plt
 import picosort as ps
