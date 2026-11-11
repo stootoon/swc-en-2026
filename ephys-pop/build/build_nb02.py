@@ -459,15 +459,64 @@ print("median across channels after  CAR:", np.median(np.abs(np.median(filt, axi
 """,
     ),
     md(r"""
-## 6. Variance, covariance, and the shape of noise
+## 6. The noise that neighbours share
 
-One nuisance remains, the subtle one — but to see it we first need two everyday
-statistics.
+Sections 4 and 5 removed two nuisances: slow drift, and anything *identical* on every
+channel. Is what's left just independent noise on each channel? Here's a quiet stretch
+of the filtered, referenced recording — no spikes — with two channels overlaid in
+each panel, sample by sample. On the left the two channels are **neighbours** (20 µm apart); on the
+right they're **far apart** (240 µm):
+""",),
+    code(r"""
+ch, neighbour, far = 15, 16, 3
+i0, i1 = int(0.520 * rec.fs), int(0.523 * rec.fs)       # 3 ms, no spikes
+tt = np.arange(i0, i1) / rec.fs * 1e3
 
-**Variance** measures how much a signal *wiggles* around its average: small variance =
-nearly flat, large variance = big swings. Its square root is the **standard deviation**
-$\sigma$ — the typical size of a wiggle, and the very "sigma" we'll set a detection
-threshold in (Notebook 3). Three signals of increasing variance:
+fig, ax = plt.subplots(1, 2, figsize=(12, 3.2), sharey=True)
+for a, other, label in [(ax[0], neighbour, "neighbour"), (ax[1], far, "far")]:
+    a.plot(tt, filt[i0:i1, ch], "k.-", lw=0.9, ms=4, label=f"ch {ch}")
+    a.plot(tt, filt[i0:i1, other], ".-", color="tab:orange", lw=0.9, ms=4, label=f"ch {other} ({label})")
+    r = np.corrcoef(filt[:, ch], filt[:, other])[0, 1]           # over the whole recording
+    a.set_title(f"ch {ch} and its {label} ch {other}: correlation {r:.2f}")
+    a.legend(fontsize=8, loc="upper right"); a.set_xlabel("time (ms)")
+ax[0].set_ylabel("voltage (µV)")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+The neighbours rise and fall together much of the time (look at the big dip near
+520.7 ms); the distant pair don't. Over the whole recording the neighbours' correlation
+is about 0.5, the distant pair's about 0. So there is a third nuisance: noise that is **shared by nearby channels but not by the
+whole probe**. The common average reference can't touch it — the median across 32
+channels is blind to a wiggle that only three or four adjacent sites see.
+
+Where does it come from? In a real recording, several places:
+
+- **Distant neurons.** Thousands of cells too far away to resolve each add a tiny
+  field that fades with distance. Adjacent sites see nearly the same mixture of them
+  — a "hash" that is the dominant noise source in cortex, and the usual reason sorters
+  whiten.
+- **Residual field potential.** Synaptic currents of the surrounding population make a
+  spatially smooth signal. The high-pass took out most of it, but what survives above
+  300 Hz is still smooth over hundreds of microns.
+- **Shared hardware.** Sites sit in the same electrolyte and share a reference path, so
+  thermal and electrochemical noise leaks partly between neighbours.
+- **Movement and muscle artefacts**, which are smooth across the probe rather than
+  identical on every site (so CAR removes only part of them).
+
+(Our simulator mimics the first of these: it adds noise whose similarity between two
+channels decays exponentially with their distance.)
+
+**Why this is a problem** is spelled out at the end of this section; the short version
+is that in Notebook 3 a "spike" will be something that crosses threshold on *several
+neighbouring channels at once* — and shared noise does exactly that, by chance, all
+the time. To remove it we first have to **measure** it: for every pair of channels,
+how much of their wiggle is shared? That question has a name — **covariance** — and
+to define it we need the one-channel version first.
+
+**Variance** measures how much a single signal *wiggles* around its average: small
+variance = nearly flat, large variance = big swings. Its square root is the **standard
+deviation** $\sigma$ — the typical size of a wiggle, and the very "sigma" we'll set a
+detection threshold in (Notebook 3). Three signals of increasing variance:
 """,),
     code(r"""
 rng = np.random.default_rng(0)
@@ -479,13 +528,11 @@ ax[0].set_ylabel("value"); ax[0].set_ylim(-16, 16)
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
-Low variance is a nearly flat line; high variance swings wildly. Now for *two* channels
-at once.
-
-**Covariance** compares two channels: when channel A is above its own average, does
-channel B tend to be above its average too? If so they **co-vary**. The clearest way
-to see it is to scatter one channel's voltage against another's, sample by sample, and
-draw the **ellipse** that summarises the cloud's shape:
+**Covariance** is the same idea for *two* channels: when channel A is above its own
+average, does channel B tend to be above its average too? If so they **co-vary**, and
+the covariance measures how strongly. The clearest way to see it is to scatter one
+channel's voltage against the other's, sample by sample — the traces above, replotted
+as points — and draw the **ellipse** that summarises the cloud's shape:
 """,),
     code(r"""
 from matplotlib.patches import Ellipse
