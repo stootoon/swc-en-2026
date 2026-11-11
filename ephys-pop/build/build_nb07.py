@@ -80,13 +80,27 @@ plt.title(f"unit {u}: gaps between consecutive spikes — nothing below ~1.5 ms 
 plt.show()
 """,),
     md(r"""
-The red zone is empty. That gives us a test. Suppose a sorter had split one neuron
-into two units, **A** and **B**. Each would still have no short gaps on its own, so
-each would look like a tidy neuron. But now look at the gaps *between* an A spike and
-the nearest B spike. If A and B are really the **same** neuron, those gaps can't be
-short either — the refractory rule applies to the neuron, not to our labels. If A and
-B are **different** neurons, they fire independently, and now and then one will fire
-within a millisecond of the other: no empty zone.
+The red zone is empty. That gives us a test. Suppose a sorter has handed us two units,
+**A** and **B**. Here are their spike trains (a toy, a few spikes each, times in ms):
+""",),
+    code(r"""
+A = np.array([5, 14, 22, 31, 40, 48, 56], float)     # unit A's spike times (ms)
+B = np.array([7, 16, 27, 33, 45, 53], float)         # unit B's spike times (ms)
+
+plt.figure(figsize=(9, 1.6))
+plt.eventplot(A, colors="k", lineoffsets=1, linelengths=0.7)
+plt.eventplot(B, colors="tab:orange", lineoffsets=0, linelengths=0.7)
+plt.yticks([0, 1], ["B", "A"]); plt.xlim(0, 62); plt.xlabel("time (ms)")
+plt.title("two units from the sorter — are they the same neuron?")
+plt.show()
+""",),
+    md(r"""
+Each has no short gaps on its own, so each looks like a tidy neuron. Are they one
+neuron that the sorter split in two, or two different neurons? Look at the gaps
+*between* an A spike and the nearest B spike. If A and B are really the **same**
+neuron, those gaps can't be short either — the refractory rule applies to the neuron,
+not to our labels. If A and B are **different** neurons, they fire independently, and
+now and then one will fire within a millisecond of the other: no empty zone.
 
 So "are A and B the same neuron?" becomes "are there any short A-to-B gaps?" The tool
 that counts the gaps between two spike trains — at every separation, not just the
@@ -97,11 +111,10 @@ shortest — is the **correlogram**. Let's build it.
 To compare two spike trains A and B, we ask: **at a given lag $\tau$, how many spikes
 line up if we shift B by $\tau$?** Slide B along, and at each lag count the coincidences
 (a B spike landing within one bin of an A spike). The plot of *count vs lag* is the
-**correlogram**. Here it is on two tiny toy trains, at three example lags:
+**correlogram**. Here it is on our toy A and B, first as they are, then at three
+example lags:
 """,),
     code(r"""
-A = np.array([5, 14, 22, 31, 40, 48, 56], float)     # toy train A (times in ms)
-B = np.array([7, 16, 27, 33, 45, 53], float)         # toy train B
 bin_ms = 3.0
 
 def count_lineups(A, B, lag, bin_ms):
@@ -109,8 +122,12 @@ def count_lineups(A, B, lag, bin_ms):
     return [b for b in shifted if np.any(np.abs(A - b) < bin_ms / 2)]
 
 show = [-6, 0, 6]
-fig, axes = plt.subplots(len(show) + 1, 1, figsize=(9, 1.4 * (len(show) + 1)))
-for ax, lag in zip(axes[:-1], show):
+fig, axes = plt.subplots(len(show) + 2, 1, figsize=(9, 1.4 * (len(show) + 2)))
+axes[0].eventplot(A, colors="k", lineoffsets=1, linelengths=0.7)
+axes[0].eventplot(B, colors="tab:orange", lineoffsets=0, linelengths=0.7)
+axes[0].set_yticks([0, 1]); axes[0].set_yticklabels(["B", "A"]); axes[0].set_xlim(0, 62)
+axes[0].set_title("A and B as they are", fontsize=9)
+for ax, lag in zip(axes[1:-1], show):
     shifted = B - lag
     ax.eventplot(A, colors="k", lineoffsets=1, linelengths=0.7)
     ax.eventplot(shifted, colors="tab:orange", lineoffsets=0, linelengths=0.7)
