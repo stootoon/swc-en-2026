@@ -285,8 +285,9 @@ print("each of the", len(scores), "spikes is now just", scores.shape[1], "number
 Now the pieces. **Left column:** the mean waveform, PC1 and PC2 as shapes, and one
 real spike from the gallery rebuilt as mean + $s_1$ × PC1 + $s_2$ × PC2 (what's left
 over is noise). **Right:** every spike placed at its $(s_1, s_2)$ — its whole
-61-sample waveform boiled down to two numbers — with the gallery waveforms lettered
-and the two units from section 2 as stars.
+61-sample waveform boiled down to two numbers — with the gallery waveforms lettered,
+the two units from section 2 as stars, and a few of the actual waveforms drawn in
+miniature next to their points.
 """,),
     code(r"""
 pca = PCA(n_components=2).fit(waveforms)          # the same PCA as in the exercise
@@ -295,8 +296,8 @@ pair_scores = pca.transform(pair_example)         # the two units' spikes, in th
 
 ex = gallery["l"]                                 # one gallery spike to take apart
 s1, s2 = scores[ex]
-fig = plt.figure(figsize=(13, 7.5))
-gs = fig.add_gridspec(4, 2, width_ratios=[1, 1.15])
+fig = plt.figure(figsize=(14, 7.5))
+gs = fig.add_gridspec(4, 2, width_ratios=[0.7, 1.6])
 left = [fig.add_subplot(gs[i, 0]) for i in range(4)]
 for ax, y, col, name in [(left[0], mean_wave, "k", "mean waveform (µV)"),
                          (left[1], pc1, "tab:red", "PC1 (a shape; unit length)"),
@@ -306,13 +307,12 @@ for ax, y, col, name in [(left[0], mean_wave, "k", "mean waveform (µV)"),
 left[3].plot(tt, waveforms[ex], "k", lw=2, label="spike l, as recorded")
 left[3].plot(tt, mean_wave + s1 * pc1 + s2 * pc2, color="tab:purple", lw=2, ls="--",
              label="mean + s1·PC1 + s2·PC2")
-left[3].set_title(f"spike l  =  mean  {s1:+.0f} × PC1  {s2:+.0f} × PC2  + leftover",
-                  loc="left", fontsize=10)
-left[3].set_xlabel("sample"); left[3].set_ylabel("µV"); left[3].legend(fontsize=8)
+left[3].set_title(f"spike l (µV) = mean {s1:+.0f}·PC1 {s2:+.0f}·PC2 + rest", loc="left", fontsize=10)
+left[3].set_xlabel("sample"); left[3].legend(fontsize=8)
 
 right = fig.add_subplot(gs[:, 1])
 sc = right.scatter(scores[:, 0], scores[:, 1], s=8, c=amplitude, cmap="viridis")
-plt.colorbar(sc, ax=right, label="amplitude (µV)")
+plt.colorbar(sc, ax=right, label="amplitude (µV)", fraction=0.03, pad=0.01)
 for L, j in gallery.items():
     right.text(scores[j, 0], scores[j, 1], L, fontsize=12, fontweight="bold", ha="center", va="center",
                bbox=dict(boxstyle="circle,pad=0.15", fc="white", ec="k", lw=0.8))
@@ -321,6 +321,20 @@ for u in [0, 1]:
                   edgecolor="k", lw=0.8, label=f"unit {u} (section 2)", zorder=5)
 right.scatter(*scores[ex], s=450, facecolor="none", edgecolor="tab:purple", lw=3,
               label="spike l, rebuilt at left", zorder=4)
+
+def mini_trace(ax, wave, at, color, dx, dy, width=80, height=50):
+    # Draw `wave` as a little trace at data position at + (dx, dy), tethered to `at`.
+    x = at[0] + dx + tt / tt[-1] * width
+    y = at[1] + dy + wave / 200 * height                  # ±200 µV -> ±height
+    ax.plot(x, y, color=color, lw=1.2, zorder=6)
+    ax.plot([at[0], x[0]], [at[1], y[0]], color=color, lw=0.6, ls=":", zorder=6)
+
+mini_trace(right, pair_example[0], pair_scores[0], ps.plotting.unit_color(0), dx=15, dy=-50)
+mini_trace(right, pair_example[1], pair_scores[1], ps.plotting.unit_color(1), dx=15, dy=30)
+mini_trace(right, waveforms[ex], scores[ex], "tab:purple", dx=20, dy=-70)
+for L, dx, dy in [("b", -95, 40), ("e", 50, -110), ("f", 40, 30)]:
+    mini_trace(right, waveforms[gallery[L]], scores[gallery[L]], "k", dx=dx, dy=dy)
+
 right.set_title("every spike as 2 numbers (s1, s2)"); right.set_xlabel("s1 (score on PC1)")
 right.set_ylabel("s2 (score on PC2)"); right.legend(loc="upper right", fontsize=8)
 plt.tight_layout(); plt.show()
