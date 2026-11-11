@@ -279,9 +279,9 @@ The six clusters match the six blobs by eye.
 
 ## 4. Visualising the clusters with t-SNE
 
-We clustered on just two features (depth, amplitude) — how do we know these are
-*really* six distinct neurons, and not (say) one neuron artificially split? A good
-check is to look at the clusters in the **full waveform space**: every spike's complete multichannel snippet (~2000 numbers),
+We clustered on just two features (depth, amplitude). Did we get it wrong — merge two
+neurons into one cluster, or split one neuron in two? A useful check is to look at the
+clusters from a different angle, in the **full waveform space**: every spike's complete multichannel snippet (~2000 numbers),
 where two genuinely different neurons should differ in *many* ways at once.
 
 We can't plot 2000 dimensions, so we squash them to 2-D — and *which* squashing matters.
@@ -352,8 +352,19 @@ There are no blobs with centres and spreads to read off, no likelihood, so no BI
 choose the number of units; a new spike can't be placed on the map without rerunning
 everything; the layout changes from run to run; it is slow for millions of spikes; and
 it can draw clusters that aren't there. We cluster in a space whose distances we
-understand, and use t-SNE afterwards to *look*: if the clusters we found land in
-separate islands, that's reassuring. Compare PCA and t-SNE on our snippets:
+understand, and use t-SNE afterwards to *look*.
+
+And given toy B, what exactly can looking tell us? Not that islands are real: t-SNE
+makes islands regardless. The information is in the **agreement** between two
+independent views. The clustering used two numbers per spike; the t-SNE map used two
+thousand, and never saw the labels. So colour the map by our cluster labels and check:
+
+- **one colour in two distant islands** → that cluster may be two neurons merged;
+- **two colours in one island** → that split may be artificial;
+- **each colour in its own island** → nothing to worry about here. Consistent with six
+  units, though not proof of it.
+
+Compare PCA and t-SNE on our snippets, coloured by the six clusters:
 """,),
     code(r"""
 from sklearn.decomposition import PCA
@@ -366,21 +377,42 @@ for u in np.unique(labels):
     m = labels == u
     axes[0].scatter(pca2[m, 0], pca2[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
     axes[1].scatter(emb[m, 0], emb[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
-axes[0].set_title("PCA (linear) — some clusters overlap")
-axes[1].set_title("t-SNE (nonlinear) — clean islands")
+axes[0].set_title("PCA (linear): some clusters overlap")
+axes[1].set_title("t-SNE (nonlinear): each colour in its own island")
 for a in axes:
     a.set_xticks([]); a.set_yticks([])
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
 In the **PCA** projection several clusters pile up in the middle — the linear map can't
-pull them apart. In the **t-SNE** map all six sit in clean, separate islands: strong
-confirmation that our six clusters really are six distinct units. That's why t-SNE is a
-staple of spike-sorting QC.
+pull them apart. In the **t-SNE** map each colour sits in its own island, so the two
+views agree: no cluster looks merged, none looks split. Now see what a *disagreement*
+looks like. Cluster with **k = 9** instead — too many, as the BIC told us — and colour
+the same t-SNE map by those labels:
+""",),
+    code(r"""
+labels9 = GaussianMixture(9, n_init=10, random_state=0).fit_predict(features)
+
+fig, axes = plt.subplots(1, 2, figsize=(11, 4.5))
+for u in np.unique(labels9):
+    m = labels9 == u
+    axes[0].scatter(depth[m], amplitude[m], s=10, color=ps.plotting.unit_color(int(u)))
+    axes[1].scatter(emb[m, 0], emb[m, 1], s=10, color=ps.plotting.unit_color(int(u)))
+axes[0].set_title("k = 9 clusters in depth–amplitude"); axes[0].set_xlabel("depth (µm)")
+axes[0].set_ylabel("amplitude (µV)")
+axes[1].set_title("the same t-SNE map, coloured by the k = 9 labels")
+axes[1].set_xticks([]); axes[1].set_yticks([])
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+The map itself hasn't changed — only the colours have. Now some islands carry **two
+colours**: the k = 9 clustering split those units in two, and the waveform view says
+the halves are not separable. That is the signal t-SNE is good for. The reverse case,
+one colour spread over two islands, would flag a merge.
 
 Remember the toys, though: the gaps between islands and their sizes mean nothing, and
-lumps can appear on their own. Use t-SNE to eyeball separation, never as proof on its
-own.
+lumps can appear on their own. Use t-SNE to look for disagreements with your
+clustering, never as proof on its own.
 
 ## 5. From clusters to templates
 
