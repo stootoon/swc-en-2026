@@ -24,6 +24,7 @@ and turn those into **recall**, **precision**, and an overall **agreement** scor
 1. **Match** sorted units to true units and count hits/misses/false positives.
 2. Read the **per-unit scores** and the **confusion matrix**.
 3. **Stress-test** the sorter and watch the scores reveal where it breaks.
+4. Dissect one **failed sort** at high noise — and see how you'd notice without ground truth.
 """,),
     code(r"""
 import matplotlib.pyplot as plt, picosort as ps
@@ -167,9 +168,9 @@ plt.tight_layout(); plt.show()
 ## 3. Stress test: where does it break?
 
 A perfect score means the *problem* was easy enough, not that sorting is always easy.
-Turn up the **noise** and watch the scores fall — and notice *which* units fail first.
-The smallest-amplitude neurons disappear into the noise soonest, exactly as on real
-probes, where low-amplitude units are the hardest to isolate.
+Turn up the **noise** and watch the scores fall. Roughly, the weaker units go first,
+as on real probes, where low-amplitude units are the hardest to isolate — though, as
+the next section shows, the failure is messier than that.
 
 **Exercise 2** *(~5 min)*. Sweep the noise level, sort each recording, and plot mean recall
 vs noise. It should decline as the noise rises.
@@ -209,6 +210,109 @@ plt.title("sorting degrades as noise buries the smaller units"); plt.show()
 """,
     ),
     md(r"""
+## 4. Anatomy of a failure
+
+Pick one point on that curve — **30 µV** of noise, a realistic level for a Neuropixels
+recording — and look at what the sorter actually did. To have enough spikes to judge
+by, use a longer, busier recording (60 s, 8–15 Hz per unit), sorted once at 12 µV and
+once at 30 µV, and run the same scorecard as in section 2 on the noisy one:
+""",),
+    code(r"""
+def sorted_and_scored(noise_sd):
+    r = ps.make_recording(n_units=6, duration_s=60.0, rate_range=(8, 15), noise_sd=noise_sd, seed=0)
+    out = ps.run_picosort(r)
+    sc, ov = ps.match_to_truth(out.spike_times, out.spike_labels,
+                               r.ground_truth.spike_times, r.ground_truth.spike_labels, r.fs)
+    return r, out, sc, ov
+
+rec12, res12, scores12, _ = sorted_and_scored(12)
+rec30, res30, scores30, overlap30 = sorted_and_scored(30)
+gt30 = rec30.ground_truth
+print(f"12 µV: picosort returned {len(res12.spike_times)} spikes in {len(res12.template_ids)} units; "
+      f"mean recall {ps.summary(scores12)['mean_recall']:.2f}")
+print(f"30 µV: picosort returned {len(res30.spike_times)} spikes in {len(res30.template_ids)} units; "
+      f"mean recall {ps.summary(scores30)['mean_recall']:.2f}   (truth: {len(gt30.spike_times)} spikes in 6 units)")
+
+fig, axes = plt.subplots(1, 2, figsize=(12, 4.5))
+ps.plotting.plot_confusion(overlap30, sorted_ids=res30.template_ids,
+                           true_ids=np.arange(gt30.n_units), ax=axes[0])
+x = np.arange(len(scores30))
+axes[1].bar(x - 0.2, [s.recall for s in scores30], 0.4, label="recall")
+axes[1].bar(x + 0.2, [s.precision for s in scores30], 0.4, label="precision")
+axes[1].set_xticks(x)
+axes[1].set_xticklabels([f"u{s.true_id}\n{gt30.unit_amplitude[s.true_id]:.0f} µV" for s in scores30])
+axes[1].set_ylim(0, 1.05); axes[1].set_ylabel("score"); axes[1].legend()
+axes[1].set_title("per-unit recall and precision at 30 µV noise")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+The sorter still returned **six units**, each with a template and a spike train, and
+nothing in that output says anything is wrong. The scorecard says a lot is wrong:
+**three neurons are recovered and three are gone**, and the three sorted units standing
+in for them are near-empty — a handful of noise crossings each. Note too that the lost
+units are not simply the smallest: a 156 µV neuron vanished while a 134 µV one came
+back almost complete. Where a unit sits relative to its neighbours matters as much as
+its size.
+
+**Why.** Two stages break at once. Detection: a spike that stood clear of 12 µV noise
+is barely visible in 30 µV noise, so most real spikes are missed. Clustering: the
+surviving detections land in a feature space whose clouds have thinned and smeared.
+""",),
+    code(r"""
+fig, ax = plt.subplots(1, 2, figsize=(14, 4))
+for a, r, nsd in [(ax[0], rec12, 12), (ax[1], rec30, 30)]:
+    ps.plotting.plot_unit_spike(r, unit=0, which=5, n_channels=9, ax=a,
+                                title=f"a spike of unit 0 (156 µV) in {nsd} µV noise")
+plt.tight_layout(); plt.show()
+
+fig, ax = plt.subplots(1, 2, figsize=(11, 4), sharex=True, sharey=True)
+for a, r_, nsd in [(ax[0], res12, 12), (ax[1], res30, 30)]:
+    a.scatter(r_.parts["depth"], r_.parts["amplitude"], s=5, color="0.5")
+    a.set_title(f"{nsd} µV noise: {len(r_.det_times)} detections"); a.set_xlabel("depth (µm)")
+ax[0].set_ylabel("amplitude (µV)")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+At 12 µV the six clouds are islands; at 30 µV half of them have all but vanished and
+the rest have blurred, and no clustering can recover what the features no longer
+hold. (The sorter was *told* to find six units — `run_picosort` fixes `n_units=6` — so
+it found six. A real sorter has the same habit: it returns units, not confessions.)
+
+**How would you know, without ground truth?** This is the situation on real data: no
+scorecard, just six units. What you *do* have, for every sorted unit, is its spike
+count, its template, and its auto-correlogram from Notebook 7. Line them up:
+""",),
+    code(r"""
+fig, axes = plt.subplots(2, 6, figsize=(16, 5.5))
+order = sorted(scores30, key=lambda s: -s.recall)          # best-recovered first (we're cheating: no truth on real data)
+for col, s_ in zip(range(6), order):
+    k = s_.sorted_id
+    t = res30.spike_times[res30.spike_labels == k]
+    tmpl = res30.templates[list(res30.template_ids).index(k)]
+    pc = ps.peak_channel(tmpl)
+    axes[0, col].plot(tmpl[pc], "k")
+    axes[0, col].set_title(f"sorted unit {k}: {len(t)} spikes, {len(t) / rec30.duration_s:.1f} Hz", fontsize=9)
+    axes[0, col].set_ylim(-200, 100); axes[0, col].set_xticks([])
+    c, n = ps.correlogram(t, t, rec30.fs, bin_ms=1.0, exclude_zero=True)
+    ps.plotting.plot_correlogram(c, n, ax=axes[1, col], title="")
+    axes[1, col].set_title(f"auto-correlogram (true recall {s_.recall:.2f})", fontsize=9)
+    if n.max() == 0:
+        axes[1, col].set_ylim(0, 1); axes[1, col].text(0, 0.5, "too few spikes", ha="center", color="0.5")
+axes[0, 0].set_ylabel("template, peak channel (µV)"); axes[1, 0].set_ylabel("count")
+for a in axes[1, 1:]: a.set_ylabel("")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Three units look like neurons: hundreds of spikes at a plausible rate, a clean
+template, and an auto-correlogram with a dip at zero lag. Three look like nothing: a
+few spikes in a minute, a template that is noisy or a stray fragment of a neighbour,
+and an auto-correlogram with nothing in it. The true recall in the titles is what we *can't* see on real data; the
+rest of the panel is what we can — and it says the same thing. On real data, that
+audit is yours to do for every unit: spike count and rate, template shape, the
+refractory hole, and an amplitude distribution that isn't cut off at the detection
+threshold. Sorting on real data is as much about **auditing** the output as producing
+it.
+
 ## Wrap-up — the whole pipeline
 
 You built **picosort** end to end and graded it against a truth you controlled:
@@ -222,8 +326,8 @@ like Kilosort adds the pieces we set aside: **drift correction** (the brain move
 relative to the probe), hundreds of channels and thousands of units, GPU-scale
 matching pursuit, and automated merge/split. But the ideas are exactly the ones you
 just implemented. Next time you run Kilosort and stare at its output, you'll know what
-every step is doing — and why a low-amplitude unit near the noise is the one to
-double-check.
+every step is doing — and that the output always *looks* like units, so the
+auditing is on you.
 """,),
 ]
 
