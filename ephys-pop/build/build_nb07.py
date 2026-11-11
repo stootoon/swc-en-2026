@@ -18,7 +18,8 @@ up.
 **In this notebook you will:**
 1. See a unit as a **spike train**, and build a **correlogram** by sliding one train past
    another.
-2. Learn its two key readings — a flat *chance* level, and the **refractory hole**.
+2. Compare a train with itself — the **auto-correlogram** — and learn its two key
+   readings: a flat *chance* level, and the **refractory hole**.
 3. Diagnose an **over-split** and merge it; and see when *not* to merge.
 
 *(For well-populated correlograms we use the **true** spike trains here — we know them,
@@ -147,9 +148,7 @@ axes[-1].set_ylabel("count")
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
-That's all a correlogram is: slide, count line-ups, repeat. A train compared with
-*itself* is the **auto-correlogram** — the distribution of gaps between a unit's own
-spikes (we skip lag 0, where every spike trivially matches itself).
+That's all a correlogram is: slide, count line-ups, repeat.
 
 <details>
 <summary><b>▸ Go deeper: the flat baseline from Poisson statistics (optional)</b></summary>
@@ -209,11 +208,17 @@ print("correlogram ready")
 """,
     ),
     md(r"""
-## 3. The two readings: chance, and the refractory hole
+## 3. The auto-correlogram: a train against itself
 
-Two toy trains make the readings concrete. First a purely **random** (Poisson) train:
-spikes dropped at random times with no rule at all. We use lots of spikes so the
-histograms are smooth.
+So far we compared two different trains. Compare a train with **itself** — slide a copy
+of A past A — and you get the **auto-correlogram**: the distribution of gaps between a
+unit's *own* spikes. (We skip lag 0, where every spike trivially lines up with itself.)
+This is the tool for the question we started with: does this unit respect the
+refractory period? Its two key readings are a flat **chance** level and the
+**refractory hole**, and two toy trains make them concrete.
+
+First a purely **random** (Poisson) train: spikes dropped at random times with no rule
+at all. We use lots of spikes so the histograms are smooth.
 """,),
     code(r"""
 rng = np.random.default_rng(1)
