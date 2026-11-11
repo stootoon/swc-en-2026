@@ -284,9 +284,72 @@ We can't plot 2000 dimensions, so we squash them to 2-D — and *which* squashin
 The obvious tool is **PCA**, but PCA is **linear**: it keeps the two directions of
 largest variance, and distinct clusters can still land on top of each other in that
 projection (you saw exactly this in Notebook 4, where PC1 just re-encoded amplitude).
-**t-SNE** is a **nonlinear** embedding built for this job: it tries to keep every point
-near its true neighbours and push unrelated points apart, so genuinely separate groups
-fall into cleanly separated **islands**. Compare the two on our snippets:
+
+**t-SNE** is a **nonlinear** embedding built for this job. It gives up on preserving
+distances and preserves only **neighbourhoods**:
+
+- **Step 1, in the original space:** for every point, find its nearest neighbours (a
+  few dozen; the number is the `perplexity` knob) and note how close each one is.
+  That's all t-SNE ever looks at: each point's list of neighbours. A point on the far
+  side of the space doesn't exist as far as this point is concerned.
+- **Step 2, on a 2-D sheet:** drop the points anywhere, then nudge them repeatedly:
+  **pull** each point towards its neighbours from the list, **push** it away from
+  everything else. Stop when every point sits next to the same neighbours it had in
+  the original space.
+
+Because only neighbour lists matter, a group of points that was separate in the
+original space ends up as a separate **island**, however the dimensions were tangled.
+But the same fact is the catch: *how far apart* islands land, and *how big* they are,
+comes from the pushing and nudging, not from the data. Watch it on toys where we know
+the answer:
+""",),
+    code(r"""
+rng = np.random.default_rng(1)
+# toy A: two tight blobs close together, one loose blob far away
+A = np.vstack([rng.normal([0, 0], 0.3, (100, 2)), rng.normal([1.5, 0], 0.3, (100, 2)),
+               rng.normal([12, 0], 1.5, (100, 2))])
+lab_A = np.repeat([0, 1, 2], 100)
+# toy B: one featureless Gaussian cloud — no clusters at all
+B = rng.normal(0, 1, (300, 2))
+
+fig, ax = plt.subplots(1, 4, figsize=(15, 3.6))
+# (1) toy A, with one point's neighbour list drawn
+for g in range(3):
+    ax[0].scatter(*A[lab_A == g].T, s=10, color=ps.plotting.unit_color(g))
+i = 230; d = np.linalg.norm(A - A[i], axis=1); nn = np.argsort(d)[1:16]   # a point and its 15 nearest
+for j in nn:
+    ax[0].plot([A[i, 0], A[j, 0]], [A[i, 1], A[j, 1]], color="k", lw=0.6, alpha=0.7)
+ax[0].plot(*A[i], "ko", ms=6)
+ax[0].set_title("toy A: two close blobs, one far loose blob\n(one point's neighbour list drawn)", fontsize=9)
+# (2) its t-SNE
+emb_A = ps.tsne_embedding(A, perplexity=30)
+for g in range(3):
+    ax[1].scatter(*emb_A[lab_A == g].T, s=10, color=ps.plotting.unit_color(g))
+ax[1].set_title("t-SNE of toy A: three islands —\nbut equally spaced, equally sized", fontsize=9)
+# (3) toy B and (4) its t-SNE
+ax[2].scatter(*B.T, s=10, color="0.5")
+ax[2].set_title("toy B: one cloud, no structure", fontsize=9)
+emb_B = ps.tsne_embedding(B, perplexity=10)
+ax[3].scatter(*emb_B.T, s=10, color="0.5")
+ax[3].set_title("t-SNE of toy B: lumps appear\nthat aren't in the data", fontsize=9)
+for a in ax[1:]:
+    a.set_xticks([]); a.set_yticks([])
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Toy A: the two close blobs and the far blob come out as **three islands**, which is
+what we want — neighbourhoods were preserved. But the far blob is no longer far, and
+the loose blob is no longer loose: distances and sizes in the map mean nothing. Toy B:
+a single structureless cloud comes out lumpy, because pulling neighbours together and
+pushing everyone else apart makes lumps whether or not any were there.
+
+So why not cluster with t-SNE all the time? Because it is a **picture, not a model**.
+There are no blobs with centres and spreads to read off, no likelihood, so no BIC to
+choose the number of units; a new spike can't be placed on the map without rerunning
+everything; the layout changes from run to run; it is slow for millions of spikes; and
+it can draw clusters that aren't there. We cluster in a space whose distances we
+understand, and use t-SNE afterwards to *look*: if the clusters we found land in
+separate islands, that's reassuring. Compare PCA and t-SNE on our snippets:
 """,),
     code(r"""
 from sklearn.decomposition import PCA
@@ -311,10 +374,9 @@ pull them apart. In the **t-SNE** map all six sit in clean, separate islands: st
 confirmation that our six clusters really are six distinct units. That's why t-SNE is a
 staple of spike-sorting QC.
 
-**One caution.** t-SNE is for *looking*, not measuring — the distances between islands
-and their sizes are **not** meaningful (it deliberately warps space to separate
-neighbourhoods), and on structureless data it can even invent apparent clusters. Use it
-to eyeball separation, never as proof on its own.
+Remember the toys, though: the gaps between islands and their sizes mean nothing, and
+lumps can appear on their own. Use t-SNE to eyeball separation, never as proof on its
+own.
 
 ## 4. From clusters to templates
 
