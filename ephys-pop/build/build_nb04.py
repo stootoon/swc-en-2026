@@ -134,14 +134,15 @@ Here are real waveforms from our recording, drawn with time running downwards an
 laid out in two rows. Within each row the waveforms are ordered along one
 **direction of variation**: in the top row they change in one way as you go from left
 to right, in the bottom row in another. The two units from above are slotted into
-each row at the position their shape puts them. (The rows were ordered by a method
-you'll build yourself in a moment.)
+each row at the position their shape puts them (one actual spike of each). The rows
+were ordered by a method you'll build yourself in a moment.
 """,),
     code(r"""
 waveforms = ps.peak_waveforms(snippets)          # (n_spikes, 61): every real spike, peak channel
 scores0, comps0, mean0 = ps.pca_features(waveforms, 2)   # the backend's version of what Exercise 2 builds
 pair_mean = np.array([pair_waves[lab == u].mean(0) for u in [0, 1]])
-pair_scores0 = (pair_mean - mean0) @ comps0.T            # the two units, in the same coordinates
+pair_example = np.array([pair_waves[lab == u][0] for u in [0, 1]])   # one real spike of each unit
+pair_scores0 = (pair_example - mean0) @ comps0.T          # the two spikes, in the same coordinates
 
 def pick_along(axis, cand, n=6):
     # n spikes from `cand`, spread evenly along one direction
@@ -157,7 +158,7 @@ tt = np.arange(waveforms.shape[1])
 fig, axes = plt.subplots(2, 1, figsize=(13, 7))
 for axis, ax, letters in [(0, axes[0], "abcdef"), (1, axes[1], "ghijkl")]:
     items = [(scores0[j, axis], waveforms[j], "k", L) for j, L in zip(rows[axis], letters)]
-    items += [(pair_scores0[u, axis], pair_mean[u], ps.plotting.unit_color(u), f"unit {u}") for u in [0, 1]]
+    items += [(pair_scores0[u, axis], pair_example[u], ps.plotting.unit_color(u), f"unit {u}") for u in [0, 1]]
     scale = 1.3 * max(np.abs(w).max() for _, w, _, _ in items)
     for k, (sc, w, col, L) in enumerate(sorted(items, key=lambda it: it[0])):
         ax.plot(k + w / scale, tt, color=col, lw=2 if col != "k" else 1.2)
@@ -186,8 +187,11 @@ $$\text{waveform} \approx \text{mean} + s_1 \times \text{PC1} + s_2 \times \text
 
 so each spike is described by its **scores** $s_1, s_2$ — two numbers instead of 61.
 Since the spikes of one neuron are near-copies, a couple of directions capture almost
-all the variation. Look at the **scree plot** — the fraction of variance each
-component explains:
+all the variation. **Left:** the **scree plot** — the fraction of variance across all
+spikes that each component explains. **Right:** what that means for one spike (the
+unit 1 spike from the gallery): its deviation from the mean, then that deviation
+rebuilt from one, two and three components, each labelled with the share of the
+spike's variance it captures. Each component adds a piece the previous ones missed.
 
 <details>
 <summary><b>▸ Go deeper: what PCA actually computes (optional)</b></summary>
@@ -220,10 +224,31 @@ rebuild it almost perfectly and the rest is noise.
 """,),
     code(r"""
 ev = ps.explained_variance(waveforms, n_components=8)
-plt.figure(figsize=(5, 3.4))
-plt.bar(np.arange(1, 9), ev)
-plt.xlabel("principal component"); plt.ylabel("variance explained")
-plt.title(f"first 2 PCs capture {ev[:2].sum():.0%} of waveform variation"); plt.show()
+_, comps3, mean3 = ps.pca_features(waveforms, 3)         # three components this time
+x = pair_example[1] - mean3                               # the unit 1 spike, mean subtracted
+s3 = x @ comps3.T                                         # its scores on PC1..3
+
+fig = plt.figure(figsize=(12, 6))
+gs = fig.add_gridspec(4, 2, width_ratios=[1, 1.1])
+ax = fig.add_subplot(gs[:, 0])
+ax.bar(np.arange(1, 9), ev)
+ax.set_xlabel("principal component"); ax.set_ylabel("variance explained (all spikes)")
+ax.set_title(f"scree plot: first 2 PCs capture {ev[:2].sum():.0%}")
+panels = [fig.add_subplot(gs[i, 1]) for i in range(4)]
+panels[0].plot(tt, x, color=ps.plotting.unit_color(1), lw=1.5)
+panels[0].set_title("unit 1 spike, mean subtracted", loc="left", fontsize=10)
+for k in range(1, 4):
+    rebuilt = s3[:k] @ comps3[:k]
+    captured = 1 - ((x - rebuilt) ** 2).sum() / (x ** 2).sum()
+    panels[k].plot(tt, x, color=ps.plotting.unit_color(1), lw=1, alpha=0.4)
+    panels[k].plot(tt, rebuilt, "k", lw=1.5)
+    panels[k].set_title(f"rebuilt from PC1..{k}: captures {captured:.0%} of this spike's variance",
+                        loc="left", fontsize=10)
+for p_ in panels:
+    p_.axhline(0, color="0.8", lw=0.5); p_.set_ylabel("µV")
+    if p_ is not panels[-1]: p_.tick_params(labelbottom=False)
+panels[-1].set_xlabel("sample")
+plt.tight_layout(); plt.show()
 """,),
     md(r"""
 **Exercise 2** *(~3 min · easy)*. Complete `pca_scores` using **sklearn's `PCA`**: fit it with
@@ -266,7 +291,7 @@ and the two units from section 2 as stars.
     code(r"""
 pca = PCA(n_components=2).fit(waveforms)          # the same PCA as in the exercise
 pc1, pc2, mean_wave = pca.components_[0], pca.components_[1], pca.mean_
-pair_scores = pca.transform(pair_mean)            # the two units, in these coordinates
+pair_scores = pca.transform(pair_example)         # the two units' spikes, in these coordinates
 
 ex = gallery["l"]                                 # one gallery spike to take apart
 s1, s2 = scores[ex]
@@ -294,6 +319,8 @@ for L, j in gallery.items():
 for u in [0, 1]:
     right.scatter(*pair_scores[u], marker="*", s=350, color=ps.plotting.unit_color(u),
                   edgecolor="k", lw=0.8, label=f"unit {u} (section 2)", zorder=5)
+right.scatter(*scores[ex], s=450, facecolor="none", edgecolor="tab:purple", lw=3,
+              label="spike l, rebuilt at left", zorder=4)
 right.set_title("every spike as 2 numbers (s1, s2)"); right.set_xlabel("s1 (score on PC1)")
 right.set_ylabel("s2 (score on PC2)"); right.legend(loc="upper right", fontsize=8)
 plt.tight_layout(); plt.show()
