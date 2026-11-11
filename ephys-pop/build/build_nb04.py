@@ -344,11 +344,12 @@ could not separate, are where PC2 earns its keep.
 
 ## 4. Resolving the ambiguity
 
-Back to the two units from section 2. Depth and amplitude saw one blob. Run the same
-PCA on *their* spikes and look at them in shape space:
+Back to the two units from section 2. Depth and amplitude saw one blob. Put every
+one of *their* spikes into the same shape space (the recording's PC1 and PC2, the
+axes of the scatter above) and look:
 """,),
     code(r"""
-sc2 = pca_scores(pair_waves, 2)                   # the sklearn PCA from Exercise 2
+sc2 = pca.transform(pair_waves)                   # scores on the recording's PC1 and PC2
 
 fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
 for u, rebound in [(0, 0.2), (1, 0.6)]:
@@ -359,12 +360,13 @@ for u, rebound in [(0, 0.2), (1, 0.6)]:
 axes[0].set_title("the two units' waveforms"); axes[0].set_xlabel("sample")
 axes[0].set_ylabel("µV"); axes[0].legend(fontsize=8)
 axes[1].set_title("depth–amplitude: one blob"); axes[1].set_xlabel("depth"); axes[1].set_ylabel("amp")
-axes[2].set_title("PC (shape) space: two clusters"); axes[2].set_xlabel("PC1"); axes[2].set_ylabel("PC2")
+axes[2].set_title("shape space: two clusters"); axes[2].set_xlabel("s1 (score on PC1)"); axes[2].set_ylabel("s2 (score on PC2)")
 axes[2].legend(); plt.tight_layout(); plt.show()
 """,),
     md(r"""
-Two clean clusters. Depth and amplitude, plus a couple of shape scores, is the
-feature set we'll cluster in the next notebook.
+Two clean clusters, separated along $s_2$ just as the two stars were. Depth and
+amplitude, plus a couple of shape scores, is the feature set we'll cluster in the
+next notebook.
 """,),
     md(r"""
 ## Wrap-up
