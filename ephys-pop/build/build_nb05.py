@@ -45,26 +45,89 @@ print(f"{len(times)} spikes kept for clustering")
     md(r"""
 ## 1. Clustering: fitting blobs to points
 
-**Clustering** means: given a pile of points with no labels, discover the groups. Our
-tool is the **Gaussian mixture**. It models each group as a **Gaussian** — a blob of
-points scattered around a centre, densest in the middle and thinning out with distance
-(a 2-D bell curve). A *mixture* is simply several such blobs. Fitting one to the data
-finds each blob's centre and shape, and for every point the blob it most likely came
-from. Here it is on a toy with three blobs:
+**Clustering** means: given a pile of points with no labels, discover the groups.
+Here is such a pile — two features measured for a few hundred points, and nothing
+else:
+""",),
+    code(r"""
+rng = np.random.default_rng(0)
+centres = np.array([[0, 0], [5, 4], [8, -1]])
+toy = np.vstack([rng.normal(c, 0.8, size=(120, 2)) for c in centres])
+
+plt.figure(figsize=(5, 4))
+plt.scatter(toy[:, 0], toy[:, 1], s=12, color="0.5")
+plt.title("a pile of unlabelled points"); plt.xlabel("feature 1"); plt.ylabel("feature 2")
+plt.show()
+""",),
+    md(r"""
+You can *see* three groups. The job is to get a computer to see them too, with no
+labels to learn from. Our tool is the **Gaussian mixture**.
+
+- A **Gaussian** is a blob of points scattered around a **centre**, densest in the
+  middle and thinning out with distance — a 2-D bell curve. Its **spread** can be
+  wider in one direction than another, so the blob is an ellipse.
+- A **mixture** is several such blobs at once, each with its own centre, spread, and
+  share of the points.
+- **Fitting** a mixture to the data means adjusting those centres and spreads until
+  the blobs sit over the data as well as possible. Once fitted, every point can be
+  **assigned** to the blob it most likely came from — that's the clustering.
+""",),
+    code(r"""
+from matplotlib.patches import Ellipse
+
+def draw_blob(ax, mean, cov, color, label=None):
+    # Shade a Gaussian blob as its 1-sigma and 2-sigma ellipses, with an x at the centre.
+    vals, vecs = np.linalg.eigh(cov)
+    angle = np.degrees(np.arctan2(vecs[1, 1], vecs[0, 1]))
+    for k, alpha in [(2, 0.15), (1, 0.35)]:
+        ax.add_patch(Ellipse(mean, 2 * k * np.sqrt(vals[1]), 2 * k * np.sqrt(vals[0]),
+                             angle=angle, color=color, alpha=alpha, lw=0))
+    ax.plot(*mean, "x", color="k", ms=7, mew=1.5, label=label)
+
+blobs = [(np.array([0.0, 0.0]), np.array([[1.0, 0.6], [0.6, 1.0]])),
+         (np.array([5.0, 4.0]), np.array([[0.5, 0.0], [0.0, 1.2]])),
+         (np.array([8.0, -1.0]), np.array([[1.2, -0.4], [-0.4, 0.5]]))]
+
+fig, ax = plt.subplots(1, 3, figsize=(13, 3.8), sharex=True, sharey=True)
+# (1) one Gaussian: a centre and a spread
+draw_blob(ax[0], *blobs[0], "tab:blue")
+ax[0].annotate("centre", blobs[0][0], xytext=(2.5, 2.5), arrowprops=dict(arrowstyle="->"))
+ax[0].annotate("spread (1σ, 2σ)", (1.6, -1.2), xytext=(3.5, -2.8), arrowprops=dict(arrowstyle="->"))
+ax[0].set_title("a Gaussian: centre + spread")
+# (2) a mixture: several blobs, each with its own centre and spread
+for (m, c), g in zip(blobs, range(3)):
+    draw_blob(ax[1], m, c, ps.plotting.unit_color(g))
+ax[1].set_title("a mixture: several blobs")
+# (3) assignment: a point belongs to the blob it most likely came from
+for (m, c), g in zip(blobs, range(3)):
+    draw_blob(ax[2], m, c, ps.plotting.unit_color(g))
+q = np.array([4.2, 2.2])
+ax[2].plot(*q, "o", color="k", ms=8); ax[2].text(q[0] + 0.3, q[1] - 0.2, "which blob?", fontsize=9)
+for m, _ in blobs:
+    ax[2].plot([q[0], m[0]], [q[1], m[1]], ":", color="0.4", lw=1)
+ax[2].set_title("assign each point to its most likely blob")
+for a in ax:
+    a.set_xlim(-3.5, 11.5); a.set_ylim(-4, 7); a.set_xlabel("feature 1")
+ax[0].set_ylabel("feature 2")
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+Now fit a three-blob mixture to the pile. `sklearn` does the fitting; we ask it for
+each point's most likely blob, and draw the blobs it found over the points:
 """,),
     code(r"""
 from sklearn.mixture import GaussianMixture
 
-rng = np.random.default_rng(0)
-centres = np.array([[0, 0], [5, 4], [8, -1]])
-toy = np.vstack([rng.normal(c, 0.8, size=(120, 2)) for c in centres])
-assignment = GaussianMixture(n_components=3, random_state=0).fit_predict(toy)
+gmm = GaussianMixture(n_components=3, random_state=0).fit(toy)
+assignment = gmm.predict(toy)                  # each point's most likely blob
 
 plt.figure(figsize=(5, 4))
+ax = plt.gca()
 for g in range(3):
     m = assignment == g
-    plt.scatter(toy[m, 0], toy[m, 1], s=12, color=ps.plotting.unit_color(g))
-plt.title("a Gaussian mixture recovers the three blobs")
+    ax.scatter(toy[m, 0], toy[m, 1], s=12, color=ps.plotting.unit_color(g))
+    draw_blob(ax, gmm.means_[g], gmm.covariances_[g], ps.plotting.unit_color(g))
+plt.title("the fitted mixture, and each point's blob")
 plt.xlabel("feature 1"); plt.ylabel("feature 2"); plt.show()
 """,),
     md(r"""
