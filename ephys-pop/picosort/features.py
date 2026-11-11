@@ -55,8 +55,12 @@ def pca_features(waveforms: np.ndarray, n_components: int = 3):
     mean = X.mean(axis=0)
     Xc = X - mean
     U, S, Vt = np.linalg.svd(Xc, full_matrices=False)
-    components = Vt[:n_components]
+    components = Vt[:n_components].copy()
     scores = Xc @ components.T
+    # Fix each component's (arbitrary) sign the way sklearn does, so the two agree.
+    for k in range(n_components):
+        if scores[np.argmax(np.abs(scores[:, k])), k] < 0:
+            components[k] *= -1; scores[:, k] *= -1
     return scores, components, mean
 
 

@@ -90,51 +90,104 @@ ps.plotting.plot_feature_space(depth, amplitude, title="every detected spike (un
 plt.show()
 """,),
     md(r"""
-Those clouds are the units, waiting to be found — that's Notebook 5. But first, two
-more features to make the clouds even cleaner, and to handle a case depth and
-amplitude *can't*.
+Those clouds are the units, waiting to be found — that's Notebook 5. But depth and
+amplitude have a blind spot. Two neurons can sit at the **same depth** and fire at the
+**same amplitude**. Here are two such units, built to order: same place, same
+peak-to-peak size, differing only in how big the **rebound** after the trough is. To
+depth and amplitude they are one blob.
+""",),
+    code(r"""
+probe = rec.probe
+def one_unit(rebound, seed):
+    wf = ps.spike_waveform(peak_ratio=rebound)              # bigger rebound after the trough
+    tmpl = ps.make_template(probe, [0, 300], amplitude=230 / (wf.max() - wf.min()),  # same peak-to-peak
+                            waveform=wf)
+    rng = np.random.default_rng(seed)
+    return np.array([tmpl + rng.normal(0, 8, tmpl.shape) for _ in range(120)])
+
+snips = np.concatenate([one_unit(0.2, 1), one_unit(0.6, 2)])   # 120 spikes of each unit
+lab = np.r_[np.zeros(120), np.ones(120)].astype(int)
+_, amp2, dep2 = ps.localize(snips, probe)
+pair_waves = ps.peak_waveforms(snips)             # each spike's waveform on its peak channel
+
+fig, axes = plt.subplots(1, 2, figsize=(10, 3.8))
+for u in [0, 1]:
+    m = lab == u
+    axes[0].plot(pair_waves[m][:20].T, color=ps.plotting.unit_color(u), lw=0.5, alpha=0.4)
+    axes[0].plot(pair_waves[m].mean(0), color=ps.plotting.unit_color(u), lw=2.5, label=f"unit {u}")
+    axes[1].scatter(dep2[m], amp2[m], s=10, color=ps.plotting.unit_color(u), label=f"unit {u}")
+axes[0].set_title("two units' spikes (20 each) and their averages")
+axes[0].set_xlabel("sample"); axes[0].set_ylabel("µV"); axes[0].legend()
+axes[1].set_title("depth–amplitude: one blob")
+axes[1].set_xlabel("depth (µm)"); axes[1].set_ylabel("amplitude (µV)"); axes[1].legend()
+plt.tight_layout(); plt.show()
+""",),
+    md(r"""
+The *shapes* are plainly different, so shape is the feature we're missing. But a
+waveform is 61 numbers. Which **aspect** of the shape should we measure — the width?
+the size of the rebound? where the trough falls? Rather than guess, we'll let the
+data tell us which aspects of shape actually vary from spike to spike.
 
 ## 3. Shape, via PCA
 
-Two neurons can sit at the same depth and fire at the same amplitude yet have
-different **waveform shapes** — a narrow spike vs a broad one. Depth and amplitude
-can't tell them apart, but shape can. The trouble is a waveform is 61 numbers; we
-want a couple. **Principal component analysis** finds the few directions along which
-waveforms actually vary and re-expresses each waveform by its **scores** on them.
-
-**The idea in two dimensions first.** Remember the tilted cloud of two channels' noise
-in Notebook 2? A cloud like that has a **long axis** (the direction it spreads most)
-and a short axis at right angles. PCA finds those axes. The long axis is **PC1**; a
-point's position along it — its **score** — captures most of what makes that point
-different from the others, in a single number.
+Here are real waveforms from our recording, drawn with time running downwards and
+laid out in two rows. Within each row the waveforms are ordered along one
+**direction of variation**: in the top row they change in one way as you go from left
+to right, in the bottom row in another. The two units from above are slotted into
+each row at the position their shape puts them. (The rows were ordered by a method
+you'll build yourself in a moment.)
 """,),
     code(r"""
-# A cloud of 2-D points, stretched and tilted (like the neighbour-channel cloud in NB2).
-rng = np.random.default_rng(1)
-cloud = rng.normal(size=(400, 2)) @ np.array([[2.4, 1.3], [0.0, 0.7]])
-cloud = cloud - cloud.mean(0)
-from sklearn.decomposition import PCA
-pca = PCA(n_components=2).fit(cloud)          # PCA finds the cloud's principal axes
+waveforms = ps.peak_waveforms(snippets)          # (n_spikes, 61): every real spike, peak channel
+scores0, comps0, mean0 = ps.pca_features(waveforms, 2)   # the backend's version of what Exercise 2 builds
+pair_mean = np.array([pair_waves[lab == u].mean(0) for u in [0, 1]])
+pair_scores0 = (pair_mean - mean0) @ comps0.T            # the two units, in the same coordinates
 
-plt.figure(figsize=(4.8, 4.8))
-plt.scatter(cloud[:, 0], cloud[:, 1], s=8, alpha=0.4)
-for k, color in zip(range(2), ["tab:red", "tab:orange"]):
-    v = pca.components_[k] * np.sqrt(pca.explained_variance_[k]) * 2   # axis × 2 std
-    plt.arrow(0, 0, v[0], v[1], color=color, width=0.06, length_includes_head=True)
-    plt.text(v[0] * 1.15, v[1] * 1.15, f"PC{k+1}", color=color, fontweight="bold")
-plt.gca().set_aspect("equal"); plt.xlabel("feature 1"); plt.ylabel("feature 2")
-plt.title("PCA finds the axes of most spread"); plt.show()
+def pick_along(axis, cand, n=6):
+    # n spikes from `cand`, spread evenly along one direction
+    targets = np.quantile(scores0[cand, axis], np.linspace(0.03, 0.97, n))
+    return [int(cand[np.argmin(np.abs(scores0[cand, axis] - t))]) for t in targets]
+
+typical = np.where(np.abs(scores0[:, 1] - np.median(scores0[:, 1])) < scores0[:, 1].std())[0]
+biggest = np.argsort(amplitude)[-40:]              # the 40 largest spikes: cleanest shapes
+rows = [pick_along(0, typical), pick_along(1, biggest)]
+
+gallery = {}                                      # letter -> spike index, used again below
+tt = np.arange(waveforms.shape[1])
+fig, axes = plt.subplots(2, 1, figsize=(13, 7))
+for axis, ax, letters in [(0, axes[0], "abcdef"), (1, axes[1], "ghijkl")]:
+    items = [(scores0[j, axis], waveforms[j], "k", L) for j, L in zip(rows[axis], letters)]
+    items += [(pair_scores0[u, axis], pair_mean[u], ps.plotting.unit_color(u), f"unit {u}") for u in [0, 1]]
+    scale = 1.3 * max(np.abs(w).max() for _, w, _, _ in items)
+    for k, (sc, w, col, L) in enumerate(sorted(items, key=lambda it: it[0])):
+        ax.plot(k + w / scale, tt, color=col, lw=2 if col != "k" else 1.2)
+        ax.text(k, 63, L, ha="center", va="top", color=col, fontweight="bold")
+        if L.isalpha() and len(L) == 1:
+            gallery[L] = int(np.where((waveforms == w).all(1))[0][0])
+    ax.set_ylim(70, -2); ax.set_xticks([]); ax.set_ylabel("time (samples)")
+    ax.set_title(f"waveforms ordered along direction {axis + 1}", loc="left")
+plt.tight_layout(); plt.show()
 """,),
     md(r"""
-PC1 (red) points along the length of the cloud — the direction of greatest spread; PC2
-(orange) is the leftover, perpendicular direction. Describing each point by its PC1
-score alone throws away only the little bit of width in the PC2 direction.
+Look at what changes along each row. **Top row:** the waveforms mostly change in
+**size**, and the two units sit side by side (same amplitude, so this direction
+barely tells them apart). **Bottom row:** the size stays similar and the **shape**
+changes — the balance between trough and rebound, and where the trough falls — and
+now the two units land well apart. Those two directions are the first two
+**principal components** of the waveforms, and they are all the shape features
+we'll need.
 
-Our waveforms are points in **61 dimensions**, not two — but PCA does exactly the same
-thing: find the handful of axes of greatest spread, and describe each waveform by its
-position along them. Since the spikes of one neuron are near-copies, a couple of axes
-capture almost all the variation. Look at the **scree plot** — the fraction of variance
-each component explains:
+**What PCA does.** It treats each waveform as a point in 61 dimensions and finds,
+from the data, (1) the **mean waveform** and (2) a few **directions** in waveform
+space along which the spikes differ most from each other. Every waveform is then
+re-expressed as
+
+$$\text{waveform} \approx \text{mean} + s_1 \times \text{PC1} + s_2 \times \text{PC2},$$
+
+so each spike is described by its **scores** $s_1, s_2$ — two numbers instead of 61.
+Since the spikes of one neuron are near-copies, a couple of directions capture almost
+all the variation. Look at the **scree plot** — the fraction of variance each
+component explains:
 
 <details>
 <summary><b>▸ Go deeper: what PCA actually computes (optional)</b></summary>
@@ -166,7 +219,6 @@ rebuild it almost perfectly and the rest is noise.
 </details>
 """,),
     code(r"""
-waveforms = ps.peak_waveforms(snippets)          # (n_spikes, n_samples)
 ev = ps.explained_variance(waveforms, n_components=8)
 plt.figure(figsize=(5, 3.4))
 plt.bar(np.arange(1, 9), ev)
@@ -205,86 +257,94 @@ print("each of the", len(scores), "spikes is now just", scores.shape[1], "number
 """,
     ),
     md(r"""
-What *is* this "shape space"? Two things worth seeing. **(left)** what the axes mean:
-start from the average waveform and move along PC1, or along PC2, to see the shape
-change each one controls. **(right)** every spike placed at its `(PC1, PC2)` — its
-whole 61-sample waveform boiled down to two numbers.
+Now the pieces. **Left column:** the mean waveform, PC1 and PC2 as shapes, and one
+real spike from the gallery rebuilt as mean + $s_1$ × PC1 + $s_2$ × PC2 (what's left
+over is noise). **Right:** every spike placed at its $(s_1, s_2)$ — its whole
+61-sample waveform boiled down to two numbers — with the gallery waveforms lettered
+and the two units from section 2 as stars.
 """,),
     code(r"""
 pca = PCA(n_components=2).fit(waveforms)          # the same PCA as in the exercise
-components, mean_wave = pca.components_, pca.mean_  # shape modes and the average waveform
-tt = np.arange(waveforms.shape[1])
+pc1, pc2, mean_wave = pca.components_[0], pca.components_[1], pca.mean_
+pair_scores = pca.transform(pair_mean)            # the two units, in these coordinates
 
-fig, ax = plt.subplots(1, 2, figsize=(11, 4))
-# (left) what each PC means, as a shape: the mean waveform, nudged +/- along each PC
-for k, col in [(0, "tab:red"), (1, "tab:green")]:
-    step = 2 * scores[:, k].std()
-    ax[0].plot(tt, mean_wave + step * components[k], color=col, lw=1, label=f"mean + PC{k+1}")
-    ax[0].plot(tt, mean_wave - step * components[k], color=col, lw=1, ls="--", label=f"mean − PC{k+1}")
-ax[0].plot(tt, mean_wave, "k", lw=2.5, label="mean waveform")
-ax[0].set_title("what the PC axes mean, as shapes"); ax[0].set_xlabel("sample")
-ax[0].set_ylabel("µV"); ax[0].legend(fontsize=7)
-# (right) every spike as a point in shape space
-sc = ax[1].scatter(scores[:, 0], scores[:, 1], s=8, c=amplitude, cmap="viridis")
-plt.colorbar(sc, ax=ax[1], label="amplitude (µV)")
-ax[1].set_title("every spike as 2 numbers (its shape)"); ax[1].set_xlabel("PC1"); ax[1].set_ylabel("PC2")
+ex = gallery["l"]                                 # one gallery spike to take apart
+s1, s2 = scores[ex]
+fig = plt.figure(figsize=(13, 7.5))
+gs = fig.add_gridspec(4, 2, width_ratios=[1, 1.15])
+left = [fig.add_subplot(gs[i, 0]) for i in range(4)]
+for ax, y, col, name in [(left[0], mean_wave, "k", "mean waveform (µV)"),
+                         (left[1], pc1, "tab:red", "PC1 (a shape; unit length)"),
+                         (left[2], pc2, "tab:green", "PC2 (a shape; unit length)")]:
+    ax.plot(tt, y, color=col, lw=2); ax.set_title(name, loc="left", fontsize=10)
+    ax.axhline(0, color="0.8", lw=0.5); ax.tick_params(labelbottom=False)
+left[3].plot(tt, waveforms[ex], "k", lw=2, label="spike l, as recorded")
+left[3].plot(tt, mean_wave + s1 * pc1 + s2 * pc2, color="tab:purple", lw=2, ls="--",
+             label="mean + s1·PC1 + s2·PC2")
+left[3].set_title(f"spike l  =  mean  {s1:+.0f} × PC1  {s2:+.0f} × PC2  + leftover",
+                  loc="left", fontsize=10)
+left[3].set_xlabel("sample"); left[3].set_ylabel("µV"); left[3].legend(fontsize=8)
+
+right = fig.add_subplot(gs[:, 1])
+sc = right.scatter(scores[:, 0], scores[:, 1], s=8, c=amplitude, cmap="viridis")
+plt.colorbar(sc, ax=right, label="amplitude (µV)")
+for L, j in gallery.items():
+    right.text(scores[j, 0], scores[j, 1], L, fontsize=12, fontweight="bold", ha="center", va="center",
+               bbox=dict(boxstyle="circle,pad=0.15", fc="white", ec="k", lw=0.8))
+for u in [0, 1]:
+    right.scatter(*pair_scores[u], marker="*", s=350, color=ps.plotting.unit_color(u),
+                  edgecolor="k", lw=0.8, label=f"unit {u} (section 2)", zorder=5)
+right.set_title("every spike as 2 numbers (s1, s2)"); right.set_xlabel("s1 (score on PC1)")
+right.set_ylabel("s2 (score on PC2)"); right.legend(loc="upper right", fontsize=8)
 plt.tight_layout(); plt.show()
 """,),
     md(r"""
-Reading the left panel: moving along **PC1** (red) mostly scales the whole spike up and
-down — it captures **overall size**. **PC2** (green) tweaks the **shape** (the width and
-rebound). Each spike is now a point in this plane.
+Reading the left column: **PC1** looks like a spike, so adding or subtracting a
+multiple of it scales the whole spike up or down — it captures **overall size**.
+**PC2** is a lopsided wiggle around the trough, so it shifts the balance between
+trough and rebound and moves the trough — it captures **shape**. A real spike is the
+mean plus a multiple of each; what's left over is noise.
 
-On the right, the spikes do fall into groups along **PC1** — but look at the colour:
-PC1 is essentially tracking **amplitude** (dark = small, yellow = large). So the
-separation you see along PC1 is the *same* separation amplitude already gave us, just
-relabelled. The genuinely *shape*-based axis is **PC2**, and here it barely separates
-anything, because our six units all make similar biphasic spikes. That's fine — depth
-and amplitude already did the job. **PC2 (pure shape) earns its keep only when two units
-share a location** — which is exactly the case we build next.
+On the right, gallery letters a–f lie in order along the $s_1$ axis (the top row of
+the gallery) and g–l in order along $s_2$ (the bottom row). The spikes do fall into
+groups along $s_1$ — but look at the colour: $s_1$ is essentially tracking
+**amplitude** (dark = small, yellow = large). So the separation along PC1 is the
+*same* separation amplitude already gave us, just relabelled. The genuinely
+*shape*-based axis is PC2, and for the recording's six units it barely separates
+anything, because they all make similar biphasic spikes. That's fine — depth and
+amplitude already did the job for them. The two stars, which depth and amplitude
+could not separate, are where PC2 earns its keep.
 
-## 4. When shape is the only clue *(optional)*
+## 4. Resolving the ambiguity
 
-*Skippable.* Build two units at the **same depth** and **same amplitude**, differing
-only in their waveform **width**. Depth and amplitude now see one blob — but their
-*shapes* differ, so PCA splits them. First, the two units' actual waveforms (the clue),
-then the two feature spaces:
+Back to the two units from section 2. Depth and amplitude saw one blob. Run the same
+PCA on *their* spikes and look at them in shape space:
 """,),
     code(r"""
-probe = rec.probe
-def one_unit(width, seed):
-    wf = ps.spike_waveform(trough_width=width)
-    tmpl = ps.make_template(probe, [0, 300], amplitude=150, waveform=wf)
-    rng = np.random.default_rng(seed)
-    return np.array([tmpl + rng.normal(0, 8, tmpl.shape) for _ in range(120)])
-
-snips = np.concatenate([one_unit(2.2, 1), one_unit(3.8, 2)])
-lab = np.r_[np.zeros(120), np.ones(120)].astype(int)
-_, amp2, dep2 = ps.localize(snips, probe)
-sc2 = pca_scores(ps.peak_waveforms(snips), 2)     # the sklearn PCA from Exercise 2
+sc2 = pca_scores(pair_waves, 2)                   # the sklearn PCA from Exercise 2
 
 fig, axes = plt.subplots(1, 3, figsize=(13, 3.8))
-# (1) the actual waveforms -- the shape difference PCA will detect
-for u, width in [(0, 2.2), (1, 3.8)]:
-    axes[0].plot(ps.spike_waveform(trough_width=width), color=ps.plotting.unit_color(u),
-                 lw=2, label=f"unit {u} (width {width})")
-axes[0].set_title("the two units' waveforms"); axes[0].set_xlabel("sample")
-axes[0].set_ylabel("amplitude (norm.)"); axes[0].legend(fontsize=8)
-# (2) + (3) the two feature spaces
-for u in [0, 1]:
+for u, rebound in [(0, 0.2), (1, 0.6)]:
     m = lab == u
+    axes[0].plot(pair_mean[u], color=ps.plotting.unit_color(u), lw=2, label=f"unit {u} (rebound {rebound})")
     axes[1].scatter(dep2[m], amp2[m], s=10, color=ps.plotting.unit_color(u))
     axes[2].scatter(sc2[m, 0], sc2[m, 1], s=10, color=ps.plotting.unit_color(u), label=f"unit {u}")
+axes[0].set_title("the two units' waveforms"); axes[0].set_xlabel("sample")
+axes[0].set_ylabel("µV"); axes[0].legend(fontsize=8)
 axes[1].set_title("depth–amplitude: one blob"); axes[1].set_xlabel("depth"); axes[1].set_ylabel("amp")
 axes[2].set_title("PC (shape) space: two clusters"); axes[2].set_xlabel("PC1"); axes[2].set_ylabel("PC2")
 axes[2].legend(); plt.tight_layout(); plt.show()
 """,),
     md(r"""
+Two clean clusters. Depth and amplitude, plus a couple of shape scores, is the
+feature set we'll cluster in the next notebook.
+""",),
+    md(r"""
 ## Wrap-up
 
-Each spike is now a handful of numbers: depth, amplitude, and a couple of shape PCs.
-In the depth–amplitude plane the units already stand out as separate clouds, and PCA
-is there for the harder cases where they don't.
+Each spike is now a handful of numbers: depth, amplitude, and a couple of shape
+scores. In the depth–amplitude plane most units already stand out as separate
+clouds, and the shape scores are there for the ones that don't.
 
 **Next (Notebook 5 — clustering):** turn those clouds into labelled units, and
 average each cluster into a template.
