@@ -77,7 +77,7 @@ def plot_footprint(template, probe, ax=None):
 
 
 def plot_unit_spike(recording, unit, which=0, n_channels=13, pad_ms=(6.0, 8.0),
-                    ax=None):
+                    ax=None, title=None):
     """Zoom in on one ground-truth spike of ``unit``, on the channel band around it.
 
     A whole-probe view over a long window turns spikes into mush; this centres on a
@@ -90,20 +90,29 @@ def plot_unit_spike(recording, unit, which=0, n_channels=13, pad_ms=(6.0, 8.0),
     pc = int(np.argmax(gt.templates[unit].max(1) - gt.templates[unit].min(1)))
     lo = max(0, pc - n_channels // 2)
     hi = min(recording.n_channels, lo + n_channels)
+    others = gt.spike_times[gt.spike_labels != unit]
+    # stride through tab10 so neighbouring channels get strongly contrasting colours
+    colors = [plt.cm.tab10((3 * k) % 10) for k in range(lo, hi)]
     ax = plot_traces(recording, channels=range(lo, hi),
                      t0=(t_spk - pad_ms[0] * 1e-3 * fs) / fs,
                      t1=(t_spk + pad_ms[1] * 1e-3 * fs) / fs,
-                     mark_spikes=gt.spike_times, ax=ax)
-    ax.set_title(f"unit {unit}: one spike, peak channel {pc}")
+                     mark_spikes=times, mark_other=others, ax=ax,
+                     colors=colors, highlight=pc)
+    ax.set_title(title or f"unit {unit}: one spike (red) on peak channel {pc} (bold); "
+                 "grey = other units' spikes")
     return ax
 
 
 def plot_signal(traces, fs, channels=None, t0=0.0, t1=0.05, spacing=None,
-                mark_spikes=None, ax=None, title=None):
+                mark_spikes=None, ax=None, title=None, colors=None, highlight=None,
+                mark_other=None):
     """Stacked voltage traces from a plain ``(n_samples, n_channels)`` array.
 
     ``t0``/``t1`` are in seconds. ``mark_spikes`` is an optional array of spike
-    sample-times (e.g. ground truth) drawn as vertical ticks.
+    sample-times (e.g. ground truth) drawn as red vertical lines; ``mark_other``
+    is a second array drawn in faint grey. ``colors`` gives one colour per channel
+    (default black), and ``highlight`` names a channel to draw thicker with a bold
+    tick label.
     """
     if ax is None:
         _, ax = plt.subplots(figsize=(11, 6))
@@ -112,30 +121,40 @@ def plot_signal(traces, fs, channels=None, t0=0.0, t1=0.05, spacing=None,
         channels = range(traces.shape[1])
     channels = list(channels)
     seg = traces[i0:i1]
+    seg = seg - seg.mean(axis=0)          # remove each channel's offset so it sits on its tick
     if spacing is None:
         spacing = 4 * np.std(seg)
     t = np.arange(i0, i1) / fs * 1e3  # milliseconds
     for row, ch in enumerate(channels):
-        ax.plot(t, seg[:, ch] + row * spacing, lw=0.6, color="k")
-    if mark_spikes is not None:
-        mark = np.asarray(mark_spikes)
+        c = "k" if colors is None else colors[row]
+        lw = 1.3 if ch == highlight else 0.6
+        ax.plot(t, seg[:, ch] + row * spacing, lw=lw, color=c)
+    for marks, color, alpha in [(mark_other, "0.5", 0.3), (mark_spikes, "tab:red", 0.35)]:
+        if marks is None:
+            continue
+        mark = np.asarray(marks)
         mark = mark[(mark >= i0) & (mark < i1)]
         for m in mark:
-            ax.axvline(m / fs * 1e3, color="tab:red", alpha=0.25, lw=1)
+            ax.axvline(m / fs * 1e3, color=color, alpha=alpha, lw=1)
     ax.set_xlabel("time (ms)")
     ax.set_yticks([r * spacing for r in range(len(channels))])
     ax.set_yticklabels(channels)
+    if colors is not None:
+        for lab, c in zip(ax.get_yticklabels(), colors):
+            lab.set_color(c)
+    if highlight in channels:
+        ax.get_yticklabels()[channels.index(highlight)].set_fontweight("bold")
     ax.set_ylabel("channel")
     ax.set_title(title if title is not None else f"voltage, {t0*1e3:.0f}–{t1*1e3:.0f} ms")
     return ax
 
 
 def plot_traces(recording, channels=None, t0=0.0, t1=0.05, spacing=None,
-                mark_spikes=None, ax=None):
+                mark_spikes=None, ax=None, **kw):
     """Stacked voltage traces of a ``Recording`` over a short window."""
     return plot_signal(recording.traces, recording.fs, channels=channels, t0=t0,
                        t1=t1, spacing=spacing, mark_spikes=mark_spikes, ax=ax,
-                       title=f"raw voltage, {t0*1e3:.0f}–{t1*1e3:.0f} ms")
+                       title=f"raw voltage, {t0*1e3:.0f}–{t1*1e3:.0f} ms", **kw)
 
 
 def plot_covariance(cov, ax=None, title="channel covariance", labels=None,

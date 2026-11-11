@@ -212,12 +212,14 @@ plt.show()
 That's one spike seen clearly. The catch is that the *whole* recording — every
 channel, all 20 seconds — is a dense wall of these events layered on noise, and
 sometimes two spikes land almost on top of each other so their waveforms **add**
-(the problem matching pursuit solves in Notebook 6). Here's a wider window across a
-band of channels to give a feel for the density:
+(the problem matching pursuit solves in Notebook 6). Here's the same spike again
+(the red line at the centre), zoomed out to a window ten times wider: red lines are
+this unit's spikes, grey lines are other units', most of them on channels outside
+this band and invisible here.
 """,),
     code(r"""
-ps.plotting.plot_traces(rec, channels=range(0, 14), t0=0.90, t1=0.99,
-                        mark_spikes=gt.spike_times)
+ps.plotting.plot_unit_spike(rec, unit=big_unit, which=5, n_channels=13, pad_ms=(60, 80),
+                            title=f"unit {big_unit}: the same spike, zoomed out (red = unit {big_unit}, grey = other units)")
 plt.show()
 """,),
     md(r"""
