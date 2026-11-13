@@ -676,7 +676,9 @@ it's exactly what whitening removes.
 
 **Whitening** removes the shared component, leaving each channel's leftover noise
 independent — so a multi-channel coincidence once again means what we want it to: a
-real spike. And it's easiest to *see* on the very cloud we just drew.
+real spike. (There is a second, independent reason to whiten, which arrives in Notebook
+6: the template-matching step is only the *best* detector of a known shape when the
+noise is white.) And it's easiest to *see* on the very cloud we just drew.
 
 ## 7. Whitening = decorrelate, then equalise
 

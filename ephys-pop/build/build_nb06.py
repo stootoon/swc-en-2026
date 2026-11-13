@@ -200,13 +200,36 @@ $$a = \frac{\langle x, s\rangle}{\lVert s\rVert^2}.$$
 Substituting back, the error *drops* by exactly $a^2\lVert s\rVert^2$ — that's the
 **score**, so "best score" = "explains the most trace."
 
-**Why correlation is the right detector.** Among all linear filters $w$, which one best
-flags the presence of $s$ in white noise? Maximising the signal-to-noise ratio
-$\langle w, s\rangle^2 / \lVert w\rVert^2$ is answered by the **Cauchy–Schwarz
-inequality**: it's largest when $w \propto s$. So the optimal detector *is* correlation
-with the template — the **matched filter**. (If the noise is coloured with covariance
-$C$, the optimum becomes $w \propto C^{-1}s$ — matched filtering on *whitened* data,
-which is exactly why Notebook 2 whitened first.)
+**Why correlation is the best linear detector.** Suppose a window of trace contains
+the spike shape $s$ plus noise, $x = s + n$, and we detect it with *some* linear filter:
+project onto a vector $w$, giving the single number $w^{\top}x = w^{\top}s + w^{\top}n$.
+The first term is the signal we get, the second the noise we get. Which $w$ gives the
+best ratio?
+
+- **Signal:** $w^{\top}s$, so its energy is $(w^{\top}s)^2$.
+- **Noise:** if the noise samples are independent with variance $\sigma^2$ (*white*),
+  then $\mathbb{E}[(w^{\top}n)^2] = w^{\top}\,\mathbb{E}[nn^{\top}]\,w = \sigma^2\lVert w\rVert^2$.
+
+So the signal-to-noise ratio is
+
+$$\text{SNR}(w) \;=\; \frac{(w^{\top}s)^2}{\sigma^2\,\lVert w\rVert^2}.$$
+
+The **Cauchy–Schwarz inequality** says $(w^{\top}s)^2 \le \lVert w\rVert^2\lVert s\rVert^2$,
+with equality only when $w \propto s$. So the ratio is at most $\lVert s\rVert^2/\sigma^2$,
+and the filter that reaches it is the template itself: the optimal linear detector of a
+known shape in white noise is correlation with that shape — the **matched filter**.
+(Optimal for *detecting*; the amplitude is then fitted separately, as above.)
+
+**A second reason to whiten.** The derivation assumed white noise. If the noise is
+*correlated*, with covariance $C$, the noise energy becomes $w^{\top}Cw$ and the ratio
+$(w^{\top}s)^2 / (w^{\top}Cw)$. Substituting $v = C^{1/2}w$ turns it back into the white
+case, and the optimum is $w \propto C^{-1}s$ — equivalently, *whiten the data, then
+correlate with the whitened template*. Notebook 2 gave one reason to whiten: correlated
+noise produces phantom multi-channel coincidences that fool the detector. This is a
+second, independent one: the simple dot product is only the best detector once the
+noise is white. (Picosort, for simplicity, runs matching pursuit on the filtered rather
+than the whitened trace; the templates and the trace are at least in the same space,
+but it is not quite the $C^{-1}s$ filter.)
 
 **Matching pursuit is greedy sparse coding.** We're approximating the whole recording as
 a sparse sum of templates, $x \approx \sum_i a_i\, s_{k_i}(t - \tau_i)$ — ideally the
