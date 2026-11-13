@@ -165,22 +165,52 @@ plt.tight_layout(); plt.show()
 That's all a correlogram is: slide, count line-ups, repeat.
 
 <details>
-<summary><b>▸ Go deeper: the flat baseline from Poisson statistics (optional)</b></summary>
+<summary><b>▸ Go deeper: where the flat baseline comes from (optional)</b></summary>
 
-Each unit is a **point process** — a random set of spike times. The cross-correlogram
-estimates the **cross-intensity**: given a spike of unit A, the rate of unit B's spikes
-at a lag $\tau$ later. If the two are **independent Poisson** processes with rates
-$\lambda_A, \lambda_B$, the expected count in a bin of width $\Delta$ over a recording of
-length $T$ is flat,
+Each unit is a **point process** — a random set of spike times. Suppose A and B are
+**independent Poisson** processes with rates $\lambda_A$ and $\lambda_B$. The one
+property of a Poisson process that matters here is that it has **no preferred times**:
+the expected number of spikes in *any* window of width $\Delta$ is $\lambda\Delta$,
+wherever the window sits.
 
-$$\mathbb{E}[\text{count at lag }\tau] \;=\; \lambda_A\,\lambda_B\,\Delta\,T,$$
+**Slide one spike of A along the recording.** Take a small interval $dt$ at time $t$.
+The chance that A fires in it is $\lambda_A\,dt$. If it does, look at B in the bin of
+width $\Delta$ sitting at lag $\tau$ after $t$. B neither knows nor cares that A just
+fired, so the expected number of B spikes in that bin is $\lambda_B\Delta$ — the same for
+every $\tau$ and every $t$. So the expected number of line-ups contributed by A spikes
+near $t$ is
 
-independent of $\tau$. For an **auto**-correlogram of one train ($N$ spikes, rate
-$\lambda = N/T$), each of the $N$ spikes expects $\lambda\Delta$ partners in a bin, so the
-level is $N\lambda\Delta = \lambda^2 T \Delta$ — the chance line we draw below. The
-**refractory hole** is the sharpest departure from it: a neuron's biophysics forbid a
-second spike within $\sim$1–2 ms, so its auto-correlogram is pinned near zero at small
-lags — something no pair of *distinct* neurons produces.
+$$\lambda_A\,dt \;\times\; \lambda_B\,\Delta .$$
+
+Now slide $t$ over the whole recording and add up:
+
+$$\mathbb{E}[\text{count at lag }\tau] \;=\; \int_0^T \lambda_A\,\lambda_B\,\Delta\, dt \;=\; \lambda_A\,\lambda_B\,T\,\Delta ,$$
+
+with no $\tau$ left in the answer: the baseline is **flat**. The shortcut version of the
+same argument is to do the integral as a sum over A's actual spikes: there are about
+$N_A = \lambda_A T$ of them, each expects $\lambda_B\Delta$ partners in the bin, so the
+total is $N_A\lambda_B\Delta$ — the same number.
+
+**What was actually assumed.** Only that B is *independent* of A and fires at a steady
+rate. B did not have to be Poisson at all — the argument never used the gaps between
+B's own spikes. So a flat cross-correlogram is the signature of **independence**, which
+is what two different neurons are expected to show.
+
+**The auto-correlogram.** Compare a train with itself: $N$ spikes at rate
+$\lambda = N/T$, each expecting $\lambda\Delta$ partners in a bin, so the level is
+$N\lambda\Delta = \lambda^2 T\Delta$ — the chance line we draw in the next section (we
+skip the spike's pairing with itself at lag 0). Here "independent of A" becomes
+"has no memory of its own past", and that is exactly what a real neuron lacks: its
+biophysics forbid a second spike within $\sim$1–2 ms, so its auto-correlogram is pinned
+near zero at small lags. That **refractory hole** is structure no pair of *distinct*
+neurons produces.
+
+**How big are the wobbles?** The count in a bin is itself roughly Poisson, so it
+scatters around the baseline by about $\sqrt{\text{baseline}}$. That gives a ruler for
+reading a hole: a bin expected to hold 20 that holds 0 is a $4.5\sigma$ departure and
+means something; a bin expected to hold 2 that holds 0 means nothing. The next section
+draws this $\pm 2\sqrt{\cdot}$ band on a random train, and it is the reason the audit in
+Notebook 8 refuses to read a correlogram with too few spikes.
 </details>
 
 **Exercise 1** *(~7 min)*. Complete `correlogram` (the full version, over real spike times):
@@ -255,7 +285,8 @@ show_train(random_train, "k", f"a random (Poisson) train: {len(random_train)} sp
 With no rule, the shortest gaps are as common as any other: plenty of spikes fall
 within 2 ms of the previous one (the red zone is full). Its auto-correlogram,
 with the **chance level** marked (the count you'd expect in any bin if spikes had no
-relationship at all, $N\lambda\Delta$):
+relationship at all, $N\lambda\Delta$), and a band of $\pm 2\sqrt{\text{chance}}$ around it —
+the size of wobble a bin shows purely by luck:
 """,),
     code(r"""
 bin_ms = 0.5
@@ -265,6 +296,8 @@ plt.figure(figsize=(6, 3.4))
 c, n = correlogram(random_train, random_train, fs, bin_ms=bin_ms, exclude_zero=True)
 plt.bar(c, n, width=bin_ms * 0.9, color="0.5")
 plt.axhline(expected, color="tab:red", lw=2, label=f"chance = N·λ·Δ ≈ {expected:.0f}")
+plt.axhspan(expected - 2 * np.sqrt(expected), expected + 2 * np.sqrt(expected), color="tab:red", alpha=0.15,
+            label="chance ± 2·√chance")
 plt.title("random (Poisson) train: flat"); plt.xlabel("lag (ms)"); plt.ylabel("count"); plt.legend(fontsize=8)
 plt.show()
 """,),
@@ -298,7 +331,9 @@ plt.legend(fontsize=8); plt.show()
 """,),
     md(r"""
 The **random** train's auto-correlogram is **flat**, hugging the red **chance line**
-$N\lambda\Delta$: with no relationship between spikes, every lag is equally likely. The
+$N\lambda\Delta$, with nearly every bar inside the luck band (about one in twenty pokes
+out, as a $2\sigma$ band allows): with no relationship between spikes, every lag is
+equally likely. The
 **refractory** train's has a **hole at zero** — no two spikes within 2 ms, so no
 small-lag pairs to count. That hole is the fingerprint of a *single real neuron*. Here it
 is on our real unit `u` — its spike train, and its auto-correlogram:
