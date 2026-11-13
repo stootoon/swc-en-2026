@@ -9,11 +9,19 @@ cells = [
 
 *SWC ENC 2026 · ephys-pop module*
 
-Clustering assigns each detected spike to one unit — but when two neurons fire almost
-at once, their waveforms **add** into a shape that belongs to neither, and detection
-either mislabels it or misses one of the two. **Matching pursuit** fixes this. Armed
-with the templates from Notebook 5, it explains the trace as a **sum of templates**,
-peeling them off one at a time, so overlapping spikes are separated.
+So far the pipeline has been a **bootstrap**: threshold detection caught the big, clean
+spikes, clustering grouped them, and from each group we averaged a **template** — a
+picture of what each neuron's spike looks like. That was never going to be the final
+spike list. The threshold only catches spikes that poke out on a single channel at a
+single moment, and it treats every crossing as one spike, even when two neurons fire
+almost at once and their waveforms **add** into a shape that belongs to neither.
+
+**Matching pursuit** is the real spike finder. Armed with the templates, it goes back to
+the whole recording and explains it as a **sum of templates**, peeling them off one at a
+time. A template pools a spike's energy across all its samples and channels, so it finds
+spikes the threshold missed; and because each matched spike is *subtracted* before the
+search continues, overlapping spikes come apart. Detection builds the templates;
+matching pursuit then determines the spike times.
 
 **In this notebook you will:**
 1. See a **collision** — two overlapping spikes — that clustering gets wrong.
@@ -318,9 +326,12 @@ one. That is the whole point of matching pursuit.
 
 ## 4. Matching pursuit on the whole recording
 
-`ps.matching_pursuit` runs this same peeling across the entire recording — over 20
-seconds our six neurons fire a **few hundred** times in total, so it peels off a few
-hundred spikes, one per real spike:
+`ps.matching_pursuit` runs this same peeling across the entire recording. Note that
+it does **not** start from the detected spikes: it rescans the trace from scratch with
+the templates, so it can return spikes the threshold never saw (and can drop
+threshold crossings that no template fits). Over 20 seconds our six neurons fire a
+**few hundred** times in total, so it should peel off a few hundred spikes, one per
+real spike:
 """,),
     code(r"""
 spike_times, spike_labels, spike_amps = ps.matching_pursuit(filtered, templates, amp_threshold=0.5)
@@ -394,7 +405,10 @@ template fired, when, and how big, everywhere — a full spike train.
 ## Wrap-up
 
 Matching pursuit turned the templates into a complete list of spike times and labels,
-pulling apart overlaps that clustering alone could not. We now have a complete sort.
+finding spikes the threshold missed and pulling apart overlaps that clustering alone
+could not. We now have a complete sort. The flip side: a neuron that never got a
+template — too few of its spikes survived detection and clustering — is invisible to
+this pass, however often it fired.
 
 **Next (Notebook 7 — cleanup):** not every unit the sorter returns is real. We use
 **refractory periods** and **correlograms** to catch units that should be merged.

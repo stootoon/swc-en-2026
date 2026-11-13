@@ -275,7 +275,15 @@ plt.tight_layout(); plt.show()
     md(r"""
 At 12 µV the six clouds are islands; at 30 µV half of them have all but vanished and
 the rest have blurred, and no clustering can recover what the features no longer
-hold. (The sorter was *told* to find six units — `run_picosort` fixes `n_units=6` — so
+hold.
+
+(Puzzle: at 30 µV picosort *returned* more spikes than it *detected*. Recall from
+Notebook 6 that detections only serve to build the templates; matching pursuit then
+rescans the whole recording with them, and a template finds spikes the threshold
+missed. So the three units that got a good template came back almost complete — but
+the three that never got one are gone for good.)
+
+(The sorter was *told* to find six units — `run_picosort` fixes `n_units=6` — so
 it found six. A real sorter has the same habit: it returns units, not confessions.)
 
 **How would you know, without ground truth?** This is the situation on real data: no
